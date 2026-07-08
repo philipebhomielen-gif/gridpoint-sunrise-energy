@@ -1,0 +1,114 @@
+<title>Philip's Energy - Solar Calculator</title><h2>Philip's Energy</h2></p><!DOCTYPE html>
+<html>
+<head>
+  <title>Philip's Energy - </title>
+  <style>
+    body {
+      font-family: Arial;
+      max-width: 500px;
+      margin: auto;
+      padding: 20px;
+      background: #f4f4f4;
+    }
+    h2 {
+      text-align: center;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0;
+    }
+    #result {
+      background: #fff;
+      padding: 15px;
+      margin-top: 15px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<p style="text-align:center; margin-top:30px; font-size:14px;">
+  
+</p>
+<body>
+
+<div style="text-align:center;">
+  <img src="https://images.unsplash.com/photo-1509391366360-2e959784a276" 
+       style="width:100%; height:260px; object-fit:cover;">
+</div>
+
+<h2 style="text-align:center;">Solar System Sizing Tool</h2>
+
+<label>Total Load (Watts)</label>
+<input type="number" id="load" placeholder="e.g 500">
+
+<label>Hours of Use (Daily)</label>
+<input type="number" id="hours" value="6">
+
+<label>System Voltage</label>
+<select id="voltage">
+  <option value="12">12V</option>
+  <option value="24">24V</option>
+</select>
+
+<button onclick="calculate()" 
+style="background-color:skyblue; border:none; padding:12px; font-weight:bold;">
+Calculate
+</button>
+
+<div id="result"></div>
+
+<script>
+function calculate() {
+  let load = parseFloat(document.getElementById("load").value);
+  let hours = parseFloat(document.getElementById("hours").value);
+  let voltage = parseFloat(document.getElementById("voltage").value);
+
+  // Step 1: Daily Energy
+  let dailyWh = load * hours;
+  let dailyKWh = dailyWh / 1000;
+
+  // Step 2: Battery Size
+  let batteryKWh = dailyKWh * 1.5;
+  let batteryWh = batteryKWh * 1000;
+  let batteryAh = batteryWh / voltage;
+
+  // Step 3: Inverter
+  let inverterBase = load * 1.3;
+  let inverterWithSurge = inverterBase + 400;
+
+  let inverterSize;
+  if (inverterWithSurge <= 2000) {
+    inverterSize = "2kVA";
+  } else if (inverterWithSurge <= 3000) {
+    inverterSize = "3kVA";
+  } else if (inverterWithSurge <= 5000) {
+    inverterSize = "5kVA";
+  } else {
+    inverterSize = "Above 5kVA";
+  }
+
+  // Step 4: Panels
+  let panelRequired = (dailyWh / 5) * 1.3;
+  let panelCount = Math.ceil(panelRequired / 550);
+
+  // Output
+  document.getElementById("result").innerHTML = `
+    <b>Daily Energy:</b> ${dailyWh.toLocaleString()}Wh (${dailyKWh.toFixed(2)} kWh)<br><br>
+
+    <b>Battery Size:</b><br>
+    ${batteryKWh.toFixed(2)} kWh<br>
+    ${Math.ceil(batteryAh)} Ah (${voltage}V system)<br><br>
+
+    <b>Inverter:</b><br>
+    ${inverterSize}<br><br>
+
+    <b>Solar Panels:</b><br>
+    ${panelCount} Panels (550W each)
+  `;
+}
+</script>
+<p style="text-align:center; margin-top:40px; font-size:14px; color:gray;">
+  Powered by Philip's Energy
+</p>
+</body>
+</html>
