@@ -8,26 +8,32 @@ No build step. The site is plain HTML, CSS, and JavaScript.
 
 ## What you enter
 
-- **Total load (watts)** — the combined wattage of the appliances to run
-- **Hours of use (daily)** — how long that load runs on a typical day
+- **Total load (watts)** — the combined wattage of the appliances to run, from just above 0 to 50,000
+- **Hours of use (daily)** — more than 0 and at most 24
 - **System voltage** — 12V, 24V, or 48V
+- **Battery type** — Lithium (LiFePO4), the default, or lead-acid/tubular
+- **Peak sun hours** — optional, default 5 for Abuja, from 1 to 12
+- **Autonomy days** — optional, default 1, from 1 to 14
 
-Load and hours must be numbers greater than zero. The page shows an inline message if they are missing or not positive, and it does not display a result until both are valid.
+Empty, zero, negative, non-numeric, and out-of-range values show an inline message. The page does not show a result until the inputs are valid.
 
 ## What it estimates
 
-The calculator keeps a simple sizing method:
+The math lives in `calc.js` (`calcSolar`). With inverter/system efficiency 0.85, panel derate 0.75, and power factor 0.8:
 
-1. **Daily energy** — load × hours, shown in watt-hours and kilowatt-hours.
-2. **Battery size** — 1.5 × daily energy, shown in kWh and in amp-hours at the selected voltage (`battery Wh ÷ voltage`, rounded up to the next amp-hour).
-3. **Inverter** — 1.3 × load, plus 400W for surge. That figure is matched to a tier:
-   - up to 2,000W → 2kVA
-   - up to 3,000W → 3kVA
-   - up to 5,000W → 5kVA
-   - above that → Above 5kVA
-4. **Solar panels** — `(daily Wh ÷ 5 peak sun hours) × 1.3`, divided by 550W modules, rounded up.
+1. **Daily energy** — `loadWh = watts × hours`. Energy to supply is `dailyWh = loadWh / 0.85`.
+2. **Battery** — `batteryWh = dailyWh × autonomy / DoD`, with DoD 0.8 for LiFePO4 and 0.5 for lead-acid. Amp-hours are `ceil(batteryWh / voltage)`. The bank is built from 12V 100, 150, or 200Ah batteries in series (to reach 12/24/48V) and parallel (to reach the amp-hours).
+3. **Inverter** — continuous need is `watts × 1.25`. That is matched to 1, 1.5, 2.5, 3.5, 5, 7.5, or 10 kVA, where each size delivers `kVA × 800 W` at 0.8 power factor. Surge headroom is twice the continuous rating. Above 10 kVA the result is “Contact us for a custom design”. A 12V choice above 1.5 kW, or a 24V choice above 3 kW, includes a voltage recommendation.
+4. **Panels** — `arrayW = dailyWh / (peak sun hours × 0.75)`, then 550W modules rounded up. Autonomy does not enlarge the array.
+5. **Charge controller** — `ceil(installed array watts / voltage × 1.25)`.
 
 These figures are a planning estimate, not a final installation design.
+
+Run the checks with:
+
+```
+node test/calc.test.js
+```
 
 ## What Philip's Energy does
 

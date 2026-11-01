@@ -436,6 +436,31 @@
 
     .assumption { margin-top: 14px; }
 
+    .advice {
+      margin: 12px 0 0;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #fff6e4;
+      border: 1px solid #efd7a4;
+      color: #6d4a0c;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .advanced {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+      background: #f7f3ea;
+    }
+
+    .advanced summary {
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .advanced .fields { margin-top: 12px; }
+
     .contact { padding: 8px 0 28px; }
 
     .contact-card {
@@ -605,15 +630,42 @@
                 <p id="hours-error" class="error" aria-live="polite"></p>
               </div>
             </div>
-            <div class="field">
-              <label for="voltage">System Voltage</label>
-              <select id="voltage" name="voltage" aria-invalid="false" aria-describedby="voltage-error">
-                <option value="12">12V</option>
-                <option value="24">24V</option>
-                <option value="48">48V</option>
-              </select>
-              <p id="voltage-error" class="error" aria-live="polite"></p>
+            <div class="field-row fields">
+              <div class="field">
+                <label for="voltage">System Voltage</label>
+                <select id="voltage" name="voltage" aria-invalid="false" aria-describedby="voltage-error">
+                  <option value="12">12V</option>
+                  <option value="24">24V</option>
+                  <option value="48">48V</option>
+                </select>
+                <p id="voltage-error" class="error" aria-live="polite"></p>
+              </div>
+              <div class="field">
+                <label for="batteryType">Battery Type</label>
+                <select id="batteryType" name="batteryType" aria-invalid="false" aria-describedby="batteryType-error">
+                  <option value="lithium" selected>Lithium (LiFePO4)</option>
+                  <option value="lead">Lead-acid / tubular</option>
+                </select>
+                <p id="batteryType-error" class="error" aria-live="polite"></p>
+              </div>
             </div>
+            <details class="advanced">
+              <summary>Advanced settings</summary>
+              <div class="field-row fields">
+                <div class="field">
+                  <label for="peakSunHours">Peak Sun Hours</label>
+                  <input id="peakSunHours" name="peakSunHours" type="number" inputmode="decimal" min="1" max="12" step="any" value="5" aria-describedby="peakSunHours-hint peakSunHours-error">
+                  <p id="peakSunHours-hint" class="hint">Default 5 for Abuja.</p>
+                  <p id="peakSunHours-error" class="error" aria-live="polite"></p>
+                </div>
+                <div class="field">
+                  <label for="autonomyDays">Autonomy (Days)</label>
+                  <input id="autonomyDays" name="autonomyDays" type="number" inputmode="decimal" min="1" max="14" step="any" value="1" aria-describedby="autonomyDays-hint autonomyDays-error">
+                  <p id="autonomyDays-hint" class="hint">Days the battery should cover without sun.</p>
+                  <p id="autonomyDays-error" class="error" aria-live="polite"></p>
+                </div>
+              </div>
+            </details>
             <button type="submit" class="btn btn-calc">Calculate</button>
           </div>
         </form>
@@ -622,27 +674,42 @@
       <section id="result" class="card results" aria-labelledby="results-heading">
         <h2 id="results-heading">Your estimate</h2>
         <p id="result-summary" class="visually-hidden" aria-live="polite"></p>
-        <p id="result-empty" class="empty">Your daily energy, battery, inverter, and panel count will show here.</p>
+        <p id="result-empty" class="empty">Your daily energy, battery, inverter, panels, and charge controller will show here.</p>
         <div id="result-body" hidden>
+          <p id="out-advice" class="advice" hidden></p>
           <dl class="stats">
             <div class="stat">
               <dt>Daily Energy</dt>
-              <dd id="out-energy"></dd>
+              <dd>
+                <span id="out-energy"></span>
+                <span id="out-energy-sub" class="stat-sub"></span>
+              </dd>
             </div>
             <div class="stat">
               <dt>Battery Size</dt>
               <dd>
                 <span id="out-battery-kwh"></span>
                 <span id="out-battery-ah" class="stat-sub"></span>
+                <span id="out-battery-config" class="stat-sub"></span>
               </dd>
             </div>
             <div class="stat">
               <dt>Inverter</dt>
-              <dd id="out-inverter"></dd>
+              <dd>
+                <span id="out-inverter"></span>
+                <span id="out-inverter-sub" class="stat-sub"></span>
+              </dd>
             </div>
             <div class="stat">
               <dt>Solar Panels</dt>
-              <dd id="out-panels"></dd>
+              <dd>
+                <span id="out-panels"></span>
+                <span id="out-panels-sub" class="stat-sub"></span>
+              </dd>
+            </div>
+            <div class="stat">
+              <dt>Charge Controller</dt>
+              <dd id="out-controller"></dd>
             </div>
           </dl>
           <a id="quote-link" class="btn btn-whatsapp" target="_blank" rel="noopener noreferrer">
@@ -651,7 +718,7 @@
             </svg>
             Get a quote on WhatsApp
           </a>
-          <p class="assumption">Planning estimate. Battery capacity is 1.5× daily energy. Inverter size is 1.3× the load plus 400W, then matched to 2, 3, or 5 kVA. Panels assume 5 peak sun hours, a 1.3× allowance, and 550W modules.</p>
+          <p id="out-assumptions" class="assumption"></p>
         </div>
       </section>
     </div>
@@ -696,26 +763,22 @@
     </div>
   </footer>
 
+  <script src="calc.js"></script>
   <script>
     (function () {
       var form = document.getElementById("calc-form");
-      var loadInput = document.getElementById("load");
-      var hoursInput = document.getElementById("hours");
-      var voltageInput = document.getElementById("voltage");
       var resultEmpty = document.getElementById("result-empty");
       var resultBody = document.getElementById("result-body");
       var resultSummary = document.getElementById("result-summary");
       var quoteLink = document.getElementById("quote-link");
-      var voltages = [12, 24, 48];
+      var advice = document.getElementById("out-advice");
+      var fieldIds = ["load", "hours", "voltage", "batteryType", "peakSunHours", "autonomyDays"];
 
-      function setError(input, message) {
-        var error = document.getElementById(input.id + "-error");
-        error.textContent = message;
+      function setError(id, message) {
+        var input = document.getElementById(id);
+        var error = document.getElementById(id + "-error");
+        error.textContent = message || "";
         input.setAttribute("aria-invalid", message ? "true" : "false");
-      }
-
-      function clearError(input) {
-        setError(input, "");
       }
 
       function hideResults() {
@@ -725,113 +788,51 @@
         quoteLink.removeAttribute("href");
       }
 
-      function readPositive(input) {
-        var raw = input.value.trim();
-        if (raw === "") return { ok: false, empty: true };
-        var value = Number(raw);
-        if (!Number.isFinite(value) || value <= 0) return { ok: false, empty: false };
-        return { ok: true, empty: false, value: value };
-      }
-
-      loadInput.addEventListener("input", function () { clearError(loadInput); });
-      hoursInput.addEventListener("input", function () { clearError(hoursInput); });
+      fieldIds.forEach(function (id) {
+        document.getElementById(id).addEventListener("input", function () {
+          setError(id, "");
+        });
+        document.getElementById(id).addEventListener("change", function () {
+          setError(id, "");
+        });
+      });
 
       form.addEventListener("submit", function (event) {
         event.preventDefault();
+        var input = {};
+        fieldIds.forEach(function (id) {
+          input[id] = document.getElementById(id).value;
+        });
 
-        var load = readPositive(loadInput);
-        var hours = readPositive(hoursInput);
-        var voltage = Number(voltageInput.value);
-        var voltageOk = voltages.indexOf(voltage) !== -1;
+        var outcome = SolarCalc.calcSolar(input);
+        fieldIds.forEach(function (id) {
+          setError(id, outcome.ok ? "" : (outcome.errors[id] || ""));
+        });
 
-        if (!load.ok) {
-          setError(loadInput, load.empty
-            ? "Enter the total load in watts."
-            : "Load must be a number greater than 0.");
-        } else {
-          clearError(loadInput);
-        }
-
-        if (!hours.ok) {
-          setError(hoursInput, hours.empty
-            ? "Enter how many hours you use this load each day."
-            : "Hours must be a number greater than 0.");
-        } else {
-          clearError(hoursInput);
-        }
-
-        if (!voltageOk) {
-          setError(voltageInput, "Choose a system voltage of 12V, 24V, or 48V.");
-        } else {
-          clearError(voltageInput);
-        }
-
-        if (!load.ok || !hours.ok || !voltageOk) {
+        if (!outcome.ok) {
           hideResults();
-          if (!load.ok) loadInput.focus();
-          else if (!hours.ok) hoursInput.focus();
-          else voltageInput.focus();
+          var first = fieldIds.filter(function (id) { return outcome.errors[id]; })[0];
+          if (first) document.getElementById(first).focus();
           return;
         }
 
-        // Step 1: Daily Energy
-        var dailyWh = load.value * hours.value;
-        var dailyKWh = dailyWh / 1000;
+        var view = SolarCalc.formatResult(outcome);
+        document.getElementById("out-energy").textContent = view.energy;
+        document.getElementById("out-energy-sub").textContent = view.energySub;
+        document.getElementById("out-battery-kwh").textContent = view.batteryKwh;
+        document.getElementById("out-battery-ah").textContent = view.batteryAh;
+        document.getElementById("out-battery-config").textContent = view.batteryConfig;
+        document.getElementById("out-inverter").textContent = view.inverter;
+        document.getElementById("out-inverter-sub").textContent = view.inverterSub;
+        document.getElementById("out-panels").textContent = view.panels;
+        document.getElementById("out-panels-sub").textContent = view.panelsSub;
+        document.getElementById("out-controller").textContent = view.controller;
+        document.getElementById("out-assumptions").textContent = outcome.assumptions;
+        advice.hidden = !view.advice;
+        advice.textContent = view.advice;
 
-        // Step 2: Battery Size
-        var batteryKWh = dailyKWh * 1.5;
-        var batteryWh = batteryKWh * 1000;
-        var batteryAh = batteryWh / voltage;
-
-        // Step 3: Inverter
-        var inverterBase = load.value * 1.3;
-        var inverterWithSurge = inverterBase + 400;
-        var inverterSize;
-        if (inverterWithSurge <= 2000) {
-          inverterSize = "2kVA";
-        } else if (inverterWithSurge <= 3000) {
-          inverterSize = "3kVA";
-        } else if (inverterWithSurge <= 5000) {
-          inverterSize = "5kVA";
-        } else {
-          inverterSize = "Above 5kVA";
-        }
-
-        // Step 4: Panels
-        var panelRequired = (dailyWh / 5) * 1.3;
-        var panelCount = Math.ceil(panelRequired / 550);
-
-        if (![dailyWh, dailyKWh, batteryKWh, batteryAh, panelCount, inverterWithSurge].every(Number.isFinite)) {
-          setError(loadInput, "Those values are too large to estimate. Try a smaller load or fewer hours.");
-          hideResults();
-          loadInput.focus();
-          return;
-        }
-
-        var energyText = dailyWh.toLocaleString() + "Wh (" + dailyKWh.toFixed(2) + " kWh)";
-        var batteryKwhText = batteryKWh.toFixed(2) + " kWh";
-        var batteryAhText = Math.ceil(batteryAh) + " Ah (" + voltage + "V system)";
-        var panelsText = panelCount + " Panels (550W each)";
-
-        document.getElementById("out-energy").textContent = energyText;
-        document.getElementById("out-battery-kwh").textContent = batteryKwhText;
-        document.getElementById("out-battery-ah").textContent = batteryAhText;
-        document.getElementById("out-inverter").textContent = inverterSize;
-        document.getElementById("out-panels").textContent = panelsText;
-
-        var message = [
-          "Hi Philip's Energy, I used your solar calculator.",
-          "",
-          "Daily Energy: " + energyText,
-          "Battery Size: " + batteryKwhText + ", " + batteryAhText,
-          "Inverter: " + inverterSize,
-          "Solar Panels: " + panelsText,
-          "",
-          "Please send me a quote."
-        ].join("\n");
-
-        quoteLink.href = "https://wa.me/2349032435448?text=" + encodeURIComponent(message);
-        resultSummary.textContent = "Estimate ready. " + energyText + ". Battery " + batteryKwhText + ", " + batteryAhText + ". Inverter " + inverterSize + ". " + panelsText + ".";
+        quoteLink.href = "https://wa.me/2349032435448?text=" + encodeURIComponent(SolarCalc.formatQuote(outcome));
+        resultSummary.textContent = "Estimate ready. " + view.energy + ". Battery " + view.batteryKwh + ", " + view.batteryAh + ". " + view.batteryConfig + ". Inverter " + view.inverter + ". " + view.panels + ". Charge controller " + view.controller + ".";
         resultEmpty.hidden = true;
         resultBody.hidden = false;
 
