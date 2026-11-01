@@ -1,114 +1,849 @@
-<title>Philip's Energy - Solar Calculator</title><h2>Philip's Energy</h2></p><!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <title>Philip's Energy - </title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Size a solar system with Philip's Energy in Abuja. Estimate daily energy, battery capacity, inverter size, and how many 550W panels you need. We deliver across FCT, Abuja.">
+  <meta name="theme-color" content="#0f3d2e">
+  <meta name="format-detection" content="telephone=no">
+  <title>Philip's Energy - Solar Calculator</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <style>
-    body {
-      font-family: Arial;
-      max-width: 500px;
-      margin: auto;
-      padding: 20px;
-      background: #f4f4f4;
+    :root {
+      --ink: #17241c;
+      --green: #0f3d2e;
+      --green-deep: #0b2e22;
+      --leaf: #1f6b4a;
+      --sun: #e39b14;
+      --sun-deep: #8a5a09;
+      --cream: #f3efe4;
+      --card: #fffdf8;
+      --line: #e3d9c8;
+      --muted: #3e5148;
+      --error: #8c2f2a;
+      --error-bg: #fff4f1;
+      --whatsapp: #0e7a62;
+      --shadow: 0 16px 40px rgba(23, 36, 28, 0.08);
+      --radius: 18px;
+      color-scheme: light;
     }
-    h2 {
+
+    * { box-sizing: border-box; }
+
+    [hidden] { display: none !important; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        radial-gradient(900px 380px at 100% -8%, rgba(227, 155, 20, 0.2), transparent 58%),
+        radial-gradient(680px 320px at -12% 0%, rgba(31, 107, 74, 0.12), transparent 55%),
+        var(--cream);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+    }
+
+    .skip {
+      position: absolute;
+      left: 16px;
+      top: -48px;
+      z-index: 20;
+      background: #fff;
+      color: var(--green);
+      padding: 8px 12px;
+      border-radius: 8px;
+    }
+
+    .skip:focus { top: 12px; }
+
+    :focus-visible {
+      outline: 3px solid var(--sun-deep);
+      outline-offset: 3px;
+    }
+
+    .stripe {
+      height: 4px;
+      background: linear-gradient(90deg, var(--green) 0 18%, var(--sun) 18% 82%, var(--green) 82%);
+    }
+
+    .wrap {
+      width: min(1080px, calc(100% - 32px));
+      margin-inline: auto;
+    }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(243, 239, 228, 0.94);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px 20px;
+      flex-wrap: wrap;
+      min-height: 68px;
+      padding: 10px 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .brand svg { width: 40px; height: 40px; flex: none; }
+
+    .brand-name {
+      font-family: Georgia, "Iowan Old Style", Palatino, serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+    }
+
+    .brand-tag {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .nav {
+      display: flex;
+      gap: 6px;
+    }
+
+    .nav a {
+      color: var(--green);
+      text-decoration: none;
+      font-weight: 700;
+      padding: 8px 12px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .nav a:hover { background: rgba(15, 61, 46, 0.08); }
+
+    .hero { padding: 36px 0 12px; }
+
+    .hero-grid {
+      display: grid;
+      gap: 28px;
+      align-items: center;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--sun-deep);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    h1, h2 {
+      font-family: Georgia, "Iowan Old Style", Palatino, serif;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(2rem, 6vw, 3.35rem);
+      max-width: 14ch;
+    }
+
+    .lede {
+      margin: 0;
+      max-width: 42rem;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+
+    .hero-card {
+      background: var(--green);
+      color: #f7f4ee;
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow);
+    }
+
+    .array {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .sun {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 40%, #ffe08a, var(--sun) 62%);
+      box-shadow: 0 0 0 8px rgba(227, 155, 20, 0.22);
+    }
+
+    .panels {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .panels span {
+      display: block;
+      height: 34px;
+      border-radius: 4px;
+      background:
+        linear-gradient(#d5e4ff 1px, transparent 1px) 0 0 / 100% 50%,
+        linear-gradient(90deg, #d5e4ff 1px, transparent 1px) 0 0 / 34% 100%,
+        linear-gradient(180deg, #3c78e0, #173e86);
+      border: 1px solid rgba(255, 255, 255, 0.45);
+    }
+
+    .hero-card ol {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .hero-card li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+    }
+
+    .hero-card li span {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(227, 155, 20, 0.18);
+      color: #ffd56a;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+
+    .layout {
+      display: grid;
+      gap: 18px;
+      align-items: start;
+      padding: 22px 0 8px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .card h2 { margin: 0 0 6px; font-size: 1.55rem; }
+
+    .card-intro {
+      margin: 0 0 18px;
+      color: var(--muted);
+    }
+
+    .fields {
+      display: grid;
+      gap: 14px;
+    }
+
+    .field { display: grid; gap: 6px; }
+
+    label { font-weight: 700; }
+
+    input, select {
+      width: 100%;
+      min-height: 48px;
+      padding: 12px 14px;
+      border: 1.5px solid #cfc4b2;
+      border-radius: 12px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+    }
+
+    select {
+      appearance: none;
+      background-image: linear-gradient(45deg, transparent 50%, var(--green) 50%), linear-gradient(135deg, var(--green) 50%, transparent 50%);
+      background-position: calc(100% - 18px) 22px, calc(100% - 12px) 22px;
+      background-size: 6px 6px, 6px 6px;
+      background-repeat: no-repeat;
+      padding-right: 36px;
+    }
+
+    input::placeholder { color: #8a8174; }
+
+    input[aria-invalid="true"],
+    select[aria-invalid="true"] {
+      border-color: var(--error);
+      background-color: var(--error-bg);
+    }
+
+    .hint, .assumption, .fine {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .error {
+      margin: 0;
+      color: var(--error);
+      font-weight: 700;
+      font-size: 0.92rem;
+    }
+
+    .error:empty { display: none; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 48px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      border: 2px solid transparent;
+      font: inherit;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .btn svg { width: 22px; height: 22px; flex: none; }
+
+    .btn-calc {
+      width: 100%;
+      margin-top: 4px;
+      background: var(--sun);
+      color: #1c1404;
+      border-color: #c8880d;
+    }
+
+    .btn-calc:hover { background: #f0ab2e; }
+
+    .btn-stack { display: grid; gap: 4px; line-height: 1.2; }
+
+    .btn-kicker {
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .btn-number { font-size: 1.05rem; }
+
+    .btn-whatsapp {
+      background: var(--whatsapp);
+      color: #fff;
+      border-color: #0b6551;
+    }
+
+    .btn-whatsapp:hover { background: #0c6b56; }
+
+    .btn-call {
+      background: #fff;
+      color: var(--green);
+      border-color: var(--green);
+    }
+
+    .btn-call:hover { background: #f3f7f4; }
+
+    .results { display: flex; flex-direction: column; }
+
+    .empty {
+      margin: 8px 0 0;
+      padding: 28px 8px;
+      color: var(--muted);
       text-align: center;
     }
-    input, select, button {
-      width: 100%;
-      padding: 10px;
-      margin: 8px 0;
+
+    .stats {
+      display: grid;
+      gap: 10px;
+      margin: 16px 0;
     }
-    #result {
-      background: #fff;
-      padding: 15px;
-      margin-top: 15px;
-      border-radius: 5px;
+
+    .stat {
+      margin: 0;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: #f7f3ea;
+      border: 1px solid var(--line);
+    }
+
+    .stat dt {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .stat dd {
+      margin: 4px 0 0;
+      font-family: Georgia, "Iowan Old Style", Palatino, serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stat-sub {
+      display: block;
+      margin-top: 2px;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      font-size: 0.98rem;
+      font-weight: 700;
+      letter-spacing: 0;
+      color: var(--green);
+    }
+
+    #result,
+    #what-we-do,
+    #contact,
+    input,
+    select,
+    .contact {
+      scroll-margin-top: 132px;
+    }
+
+    #quote-link { width: 100%; margin-top: 4px; }
+
+    .assumption { margin-top: 14px; }
+
+    .contact { padding: 8px 0 28px; }
+
+    .contact-card {
+      display: grid;
+      gap: 18px;
+      background:
+        linear-gradient(160deg, rgba(227, 155, 20, 0.14), transparent 42%),
+        var(--card);
+    }
+
+    .contact-actions {
+      display: grid;
+      gap: 10px;
+    }
+
+    .contact-actions .btn {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .site-footer {
+      border-top: 1px solid var(--line);
+      padding: 22px 0 32px;
+    }
+
+    .site-footer p {
+      margin: 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .noscript {
+      margin: 16px auto;
+      width: min(1080px, calc(100% - 32px));
+      padding: 12px 14px;
+      background: #fff4f1;
+      border: 1px solid #e7b2ac;
+      border-radius: 12px;
+    }
+
+    @media (max-width: 420px) {
+      .nav { gap: 2px; }
+      .nav a { padding: 8px 6px; font-size: 0.9rem; }
+    }
+
+    @media (min-width: 640px) {
+      .field-row, .stats {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (min-width: 800px) {
+      .contact-card {
+        grid-template-columns: 1.15fr 0.85fr;
+        align-items: center;
+      }
+
+      .contact-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (min-width: 880px) {
+      .hero { padding-top: 56px; }
+
+      .hero-grid, .layout {
+        grid-template-columns: 1.15fr 0.85fr;
+      }
+
+      .hero-grid { gap: 48px; }
+
+      .stats { grid-template-columns: 1fr; }
+
+      #quote-link { width: auto; align-self: flex-start; }
     }
   </style>
 </head>
-<p style="text-align:center; margin-top:30px; font-size:14px;">
-  
-</p>
 <body>
+  <a class="skip" href="#calculator">Skip to calculator</a>
+  <div class="stripe"></div>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="#top">
+        <svg viewBox="0 0 40 40" aria-hidden="true">
+          <rect width="40" height="40" rx="10" fill="#0f3d2e"/>
+          <circle cx="20" cy="16" r="5.2" fill="#f0b429"/>
+          <g stroke="#f0b429" stroke-width="1.6" stroke-linecap="round">
+            <path d="M20 6.2v2.2M20 23.6v2.2M9.2 16h2.2M28.6 16h2.2"/>
+            <path d="M12.2 8.4l1.6 1.6M26.2 22l1.6 1.6M12.2 23.6l1.6-1.6M26.2 10l1.6-1.6"/>
+          </g>
+          <path d="M8 33h24l-3-5.6H11z" fill="#1f6b4a"/>
+          <path d="M12.2 29.6h3.2M18.4 29.6h3.2M24.6 29.6h3.2" stroke="#f7f4ee" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        <span>
+          <span class="brand-name">Philip's Energy</span>
+          <span class="brand-tag">Solar calculator</span>
+        </span>
+      </a>
+      <nav class="nav" aria-label="Page">
+        <a href="#calculator">Calculator</a>
+        <a href="#what-we-do">What we do</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
 
-<div style="text-align:center;">
-  <img src="https://images.unsplash.com/photo-1509391366360-2e959784a276" 
-       style="width:100%; height:260px; object-fit:cover;">
-</div>
+  <main id="top">
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <p class="eyebrow">Homes, shops, and small businesses</p>
+          <h1>Solar System Sizing Tool</h1>
+          <p class="lede">Estimate daily energy, battery capacity, inverter size, and how many 550W panels to install. Then send the result to Philip's Energy for a quote.</p>
+        </div>
+        <aside class="hero-card">
+          <div class="array" aria-hidden="true">
+            <div class="sun"></div>
+            <div class="panels">
+              <span></span><span></span><span></span>
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+          <ol>
+            <li><span>01</span> Daily energy</li>
+            <li><span>02</span> Battery bank</li>
+            <li><span>03</span> Inverter tier</li>
+            <li><span>04</span> 550W panels</li>
+          </ol>
+        </aside>
+      </div>
+    </section>
 
-<h2 style="text-align:center;">Solar System Sizing Tool</h2>
+    <noscript>
+      <p class="noscript">Turn on JavaScript to calculate a system size. You can still call or WhatsApp Philip's Energy from the contact section.</p>
+    </noscript>
 
-<label>Total Load (Watts)</label>
-<input type="number" id="load" placeholder="e.g 500">
+    <div class="wrap layout" id="calculator">
+      <section class="card" aria-labelledby="form-heading">
+        <h2 id="form-heading">Your load</h2>
+        <p class="card-intro">Enter the total watts and how many hours that load runs on a typical day.</p>
+        <form id="calc-form" novalidate>
+          <div class="fields">
+            <div class="field-row fields">
+              <div class="field">
+                <label for="load">Total Load (Watts)</label>
+                <input id="load" name="load" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. 500" aria-required="true" aria-invalid="false" aria-describedby="load-hint load-error">
+                <p id="load-hint" class="hint">Add up the watts of everything you want to run.</p>
+                <p id="load-error" class="error" aria-live="polite"></p>
+              </div>
+              <div class="field">
+                <label for="hours">Hours of Use (Daily)</label>
+                <input id="hours" name="hours" type="number" inputmode="decimal" min="0" step="any" value="6" aria-required="true" aria-invalid="false" aria-describedby="hours-hint hours-error">
+                <p id="hours-hint" class="hint">How long this load runs on a typical day.</p>
+                <p id="hours-error" class="error" aria-live="polite"></p>
+              </div>
+            </div>
+            <div class="field">
+              <label for="voltage">System Voltage</label>
+              <select id="voltage" name="voltage" aria-invalid="false" aria-describedby="voltage-error">
+                <option value="12">12V</option>
+                <option value="24">24V</option>
+                <option value="48">48V</option>
+              </select>
+              <p id="voltage-error" class="error" aria-live="polite"></p>
+            </div>
+            <button type="submit" class="btn btn-calc">Calculate</button>
+          </div>
+        </form>
+      </section>
 
-<label>Hours of Use (Daily)</label>
-<input type="number" id="hours" value="6">
+      <section id="result" class="card results" aria-labelledby="results-heading">
+        <h2 id="results-heading">Your estimate</h2>
+        <p id="result-summary" class="visually-hidden" aria-live="polite"></p>
+        <p id="result-empty" class="empty">Your daily energy, battery, inverter, and panel count will show here.</p>
+        <div id="result-body" hidden>
+          <dl class="stats">
+            <div class="stat">
+              <dt>Daily Energy</dt>
+              <dd id="out-energy"></dd>
+            </div>
+            <div class="stat">
+              <dt>Battery Size</dt>
+              <dd>
+                <span id="out-battery-kwh"></span>
+                <span id="out-battery-ah" class="stat-sub"></span>
+              </dd>
+            </div>
+            <div class="stat">
+              <dt>Inverter</dt>
+              <dd id="out-inverter"></dd>
+            </div>
+            <div class="stat">
+              <dt>Solar Panels</dt>
+              <dd id="out-panels"></dd>
+            </div>
+          </dl>
+          <a id="quote-link" class="btn btn-whatsapp" target="_blank" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+              <path d="M12.04 2C6.58 2 2.15 6.4 2.15 11.83c0 1.74.46 3.44 1.34 4.94L2 22l5.39-1.4a10 10 0 0 0 4.65 1.18h.01c5.46 0 9.89-4.4 9.89-9.83C21.94 6.4 17.5 2 12.04 2zm5.76 14.15c-.24.68-1.4 1.3-1.94 1.38-.5.08-1.12.11-1.81-.11-.42-.14-.95-.31-1.64-.6-2.88-1.24-4.76-4.14-4.9-4.33-.14-.19-1.16-1.54-1.16-2.94s.73-2.08 1-2.37c.24-.28.64-.41 1.02-.41.12 0 .23 0 .33.01.3.01.44.03.64.5.24.57.82 1.98.89 2.12.07.14.12.31.02.49-.09.19-.14.31-.28.48-.14.17-.29.37-.42.5-.14.14-.28.29-.12.56.16.27.72 1.18 1.54 1.91 1.06.94 1.95 1.24 2.23 1.38.28.14.44.12.6-.07.17-.19.7-.81.88-1.09.19-.28.37-.23.62-.14.26.09 1.62.76 1.9.9.28.14.46.21.53.32.07.12.07.68-.17 1.36z"/>
+            </svg>
+            Get a quote on WhatsApp
+          </a>
+          <p class="assumption">Planning estimate. Battery capacity is 1.5× daily energy. Inverter size is 1.3× the load plus 400W, then matched to 2, 3, or 5 kVA. Panels assume 5 peak sun hours, a 1.3× allowance, and 550W modules.</p>
+        </div>
+      </section>
+    </div>
 
-<label>System Voltage</label>
-<select id="voltage">
-  <option value="12">12V</option>
-  <option value="24">24V</option>
-</select>
+    <section class="contact" id="what-we-do" aria-labelledby="what-heading">
+      <div class="wrap">
+        <div class="card contact-card">
+          <div id="contact">
+            <h2 id="what-heading">What we do</h2>
+            <p class="card-intro">Philip's Energy sells and supplies solar panels and solar equipment for installation, including inverters, batteries, and accessories.</p>
+            <p class="card-intro">We deliver across FCT, Abuja.</p>
+            <p class="fine">WhatsApp or call to ask about panels and equipment.</p>
+          </div>
+          <div class="contact-actions">
+            <a id="whatsapp-link" class="btn btn-whatsapp" href="https://wa.me/2349032435448?text=Hi%20Philip's%20Energy%2C%20I%20used%20your%20solar%20calculator" target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                <path d="M12.04 2C6.58 2 2.15 6.4 2.15 11.83c0 1.74.46 3.44 1.34 4.94L2 22l5.39-1.4a10 10 0 0 0 4.65 1.18h.01c5.46 0 9.89-4.4 9.89-9.83C21.94 6.4 17.5 2 12.04 2zm5.76 14.15c-.24.68-1.4 1.3-1.94 1.38-.5.08-1.12.11-1.81-.11-.42-.14-.95-.31-1.64-.6-2.88-1.24-4.76-4.14-4.9-4.33-.14-.19-1.16-1.54-1.16-2.94s.73-2.08 1-2.37c.24-.28.64-.41 1.02-.41.12 0 .23 0 .33.01.3.01.44.03.64.5.24.57.82 1.98.89 2.12.07.14.12.31.02.49-.09.19-.14.31-.28.48-.14.17-.29.37-.42.5-.14.14-.28.29-.12.56.16.27.72 1.18 1.54 1.91 1.06.94 1.95 1.24 2.23 1.38.28.14.44.12.6-.07.17-.19.7-.81.88-1.09.19-.28.37-.23.62-.14.26.09 1.62.76 1.9.9.28.14.46.21.53.32.07.12.07.68-.17 1.36z"/>
+              </svg>
+              <span class="btn-stack">
+                <span class="btn-kicker">WhatsApp</span>
+                <span class="btn-number">0903 243 5448</span>
+              </span>
+            </a>
+            <a id="call-link" class="btn btn-call" href="tel:+2348038368456">
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+                <path d="M6.6 3.8c.3-.7 1.1-1.1 1.9-.9l1.7.4c.7.2 1.2.8 1.2 1.5l-.1 2.2c0 .6-.3 1.2-.8 1.5l-1.2.8a12.6 12.6 0 0 0 5.6 5.6l.8-1.2c.3-.5.9-.8 1.5-.8l2.2-.1c.7 0 1.3.5 1.5 1.2l.4 1.7c.2.8-.2 1.6-.9 1.9l-1.6.7c-.7.3-1.5.4-2.2.1A17.4 17.4 0 0 1 5.8 7.6c-.3-.7-.2-1.5.1-2.2l.7-1.6z"/>
+              </svg>
+              <span class="btn-stack">
+                <span class="btn-kicker">Call</span>
+                <span class="btn-number">0803 836 8456</span>
+              </span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 
-<button onclick="calculate()" 
-style="background-color:skyblue; border:none; padding:12px; font-weight:bold;">
-Calculate
-</button>
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>Powered by Philip's Energy</p>
+    </div>
+  </footer>
 
-<div id="result"></div>
+  <script>
+    (function () {
+      var form = document.getElementById("calc-form");
+      var loadInput = document.getElementById("load");
+      var hoursInput = document.getElementById("hours");
+      var voltageInput = document.getElementById("voltage");
+      var resultEmpty = document.getElementById("result-empty");
+      var resultBody = document.getElementById("result-body");
+      var resultSummary = document.getElementById("result-summary");
+      var quoteLink = document.getElementById("quote-link");
+      var voltages = [12, 24, 48];
 
-<script>
-function calculate() {
-  let load = parseFloat(document.getElementById("load").value);
-  let hours = parseFloat(document.getElementById("hours").value);
-  let voltage = parseFloat(document.getElementById("voltage").value);
+      function setError(input, message) {
+        var error = document.getElementById(input.id + "-error");
+        error.textContent = message;
+        input.setAttribute("aria-invalid", message ? "true" : "false");
+      }
 
-  // Step 1: Daily Energy
-  let dailyWh = load * hours;
-  let dailyKWh = dailyWh / 1000;
+      function clearError(input) {
+        setError(input, "");
+      }
 
-  // Step 2: Battery Size
-  let batteryKWh = dailyKWh * 1.5;
-  let batteryWh = batteryKWh * 1000;
-  let batteryAh = batteryWh / voltage;
+      function hideResults() {
+        resultBody.hidden = true;
+        resultEmpty.hidden = false;
+        resultSummary.textContent = "";
+        quoteLink.removeAttribute("href");
+      }
 
-  // Step 3: Inverter
-  let inverterBase = load * 1.3;
-  let inverterWithSurge = inverterBase + 400;
+      function readPositive(input) {
+        var raw = input.value.trim();
+        if (raw === "") return { ok: false, empty: true };
+        var value = Number(raw);
+        if (!Number.isFinite(value) || value <= 0) return { ok: false, empty: false };
+        return { ok: true, empty: false, value: value };
+      }
 
-  let inverterSize;
-  if (inverterWithSurge <= 2000) {
-    inverterSize = "2kVA";
-  } else if (inverterWithSurge <= 3000) {
-    inverterSize = "3kVA";
-  } else if (inverterWithSurge <= 5000) {
-    inverterSize = "5kVA";
-  } else {
-    inverterSize = "Above 5kVA";
-  }
+      loadInput.addEventListener("input", function () { clearError(loadInput); });
+      hoursInput.addEventListener("input", function () { clearError(hoursInput); });
 
-  // Step 4: Panels
-  let panelRequired = (dailyWh / 5) * 1.3;
-  let panelCount = Math.ceil(panelRequired / 550);
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
 
-  // Output
-  document.getElementById("result").innerHTML = `
-    <b>Daily Energy:</b> ${dailyWh.toLocaleString()}Wh (${dailyKWh.toFixed(2)} kWh)<br><br>
+        var load = readPositive(loadInput);
+        var hours = readPositive(hoursInput);
+        var voltage = Number(voltageInput.value);
+        var voltageOk = voltages.indexOf(voltage) !== -1;
 
-    <b>Battery Size:</b><br>
-    ${batteryKWh.toFixed(2)} kWh<br>
-    ${Math.ceil(batteryAh)} Ah (${voltage}V system)<br><br>
+        if (!load.ok) {
+          setError(loadInput, load.empty
+            ? "Enter the total load in watts."
+            : "Load must be a number greater than 0.");
+        } else {
+          clearError(loadInput);
+        }
 
-    <b>Inverter:</b><br>
-    ${inverterSize}<br><br>
+        if (!hours.ok) {
+          setError(hoursInput, hours.empty
+            ? "Enter how many hours you use this load each day."
+            : "Hours must be a number greater than 0.");
+        } else {
+          clearError(hoursInput);
+        }
 
-    <b>Solar Panels:</b><br>
-    ${panelCount} Panels (550W each)
-  `;
-}
-</script>
-<p style="text-align:center; margin-top:40px; font-size:14px; color:gray;">
-  Powered by Philip's Energy
-</p>
+        if (!voltageOk) {
+          setError(voltageInput, "Choose a system voltage of 12V, 24V, or 48V.");
+        } else {
+          clearError(voltageInput);
+        }
+
+        if (!load.ok || !hours.ok || !voltageOk) {
+          hideResults();
+          if (!load.ok) loadInput.focus();
+          else if (!hours.ok) hoursInput.focus();
+          else voltageInput.focus();
+          return;
+        }
+
+        // Step 1: Daily Energy
+        var dailyWh = load.value * hours.value;
+        var dailyKWh = dailyWh / 1000;
+
+        // Step 2: Battery Size
+        var batteryKWh = dailyKWh * 1.5;
+        var batteryWh = batteryKWh * 1000;
+        var batteryAh = batteryWh / voltage;
+
+        // Step 3: Inverter
+        var inverterBase = load.value * 1.3;
+        var inverterWithSurge = inverterBase + 400;
+        var inverterSize;
+        if (inverterWithSurge <= 2000) {
+          inverterSize = "2kVA";
+        } else if (inverterWithSurge <= 3000) {
+          inverterSize = "3kVA";
+        } else if (inverterWithSurge <= 5000) {
+          inverterSize = "5kVA";
+        } else {
+          inverterSize = "Above 5kVA";
+        }
+
+        // Step 4: Panels
+        var panelRequired = (dailyWh / 5) * 1.3;
+        var panelCount = Math.ceil(panelRequired / 550);
+
+        if (![dailyWh, dailyKWh, batteryKWh, batteryAh, panelCount, inverterWithSurge].every(Number.isFinite)) {
+          setError(loadInput, "Those values are too large to estimate. Try a smaller load or fewer hours.");
+          hideResults();
+          loadInput.focus();
+          return;
+        }
+
+        var energyText = dailyWh.toLocaleString() + "Wh (" + dailyKWh.toFixed(2) + " kWh)";
+        var batteryKwhText = batteryKWh.toFixed(2) + " kWh";
+        var batteryAhText = Math.ceil(batteryAh) + " Ah (" + voltage + "V system)";
+        var panelsText = panelCount + " Panels (550W each)";
+
+        document.getElementById("out-energy").textContent = energyText;
+        document.getElementById("out-battery-kwh").textContent = batteryKwhText;
+        document.getElementById("out-battery-ah").textContent = batteryAhText;
+        document.getElementById("out-inverter").textContent = inverterSize;
+        document.getElementById("out-panels").textContent = panelsText;
+
+        var message = [
+          "Hi Philip's Energy, I used your solar calculator.",
+          "",
+          "Daily Energy: " + energyText,
+          "Battery Size: " + batteryKwhText + ", " + batteryAhText,
+          "Inverter: " + inverterSize,
+          "Solar Panels: " + panelsText,
+          "",
+          "Please send me a quote."
+        ].join("\n");
+
+        quoteLink.href = "https://wa.me/2349032435448?text=" + encodeURIComponent(message);
+        resultSummary.textContent = "Estimate ready. " + energyText + ". Battery " + batteryKwhText + ", " + batteryAhText + ". Inverter " + inverterSize + ". " + panelsText + ".";
+        resultEmpty.hidden = true;
+        resultBody.hidden = false;
+
+        if (window.matchMedia("(max-width: 719px)").matches) {
+          var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          document.getElementById("result").scrollIntoView({
+            behavior: reduce ? "auto" : "smooth",
+            block: "start"
+          });
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
