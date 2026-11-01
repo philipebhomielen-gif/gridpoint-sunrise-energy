@@ -447,6 +447,18 @@
       font-size: 0.95rem;
     }
 
+    .flag {
+      display: block;
+      margin-top: 4px;
+      color: var(--error);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    .flag:empty,
+    #out-battery-alt:empty { display: none; }
+
     .advanced {
       border: 1px solid var(--line);
       border-radius: 12px;
@@ -600,7 +612,7 @@
             <li><span>01</span> Daily energy</li>
             <li><span>02</span> Battery bank</li>
             <li><span>03</span> Inverter tier</li>
-            <li><span>04</span> 550W panels</li>
+            <li><span>04</span> Solar panels</li>
           </ol>
         </aside>
       </div>
@@ -633,36 +645,84 @@
             <div class="field-row fields">
               <div class="field">
                 <label for="voltage">System Voltage</label>
-                <select id="voltage" name="voltage" aria-invalid="false" aria-describedby="voltage-error">
+                <select id="voltage" name="voltage" aria-invalid="false" aria-describedby="voltage-hint voltage-error">
+                  <option value="auto" selected>Auto</option>
                   <option value="12">12V</option>
                   <option value="24">24V</option>
                   <option value="48">48V</option>
+                  <option value="96">96V (large systems)</option>
                 </select>
+                <p id="voltage-hint" class="hint">Auto: 12V up to 1.5 kW, 24V up to 3.5 kW, then 48V.</p>
                 <p id="voltage-error" class="error" aria-live="polite"></p>
               </div>
               <div class="field">
                 <label for="batteryType">Battery Type</label>
                 <select id="batteryType" name="batteryType" aria-invalid="false" aria-describedby="batteryType-error">
                   <option value="lithium" selected>Lithium (LiFePO4)</option>
-                  <option value="lead">Lead-acid / tubular</option>
+                  <option value="tubular">Tubular lead-acid</option>
                 </select>
                 <p id="batteryType-error" class="error" aria-live="polite"></p>
               </div>
             </div>
             <details class="advanced">
               <summary>Advanced settings</summary>
-              <div class="field-row fields">
+              <div class="fields">
                 <div class="field">
-                  <label for="peakSunHours">Peak Sun Hours</label>
-                  <input id="peakSunHours" name="peakSunHours" type="number" inputmode="decimal" min="1" max="12" step="any" value="5" aria-describedby="peakSunHours-hint peakSunHours-error">
-                  <p id="peakSunHours-hint" class="hint">Default 5 for Abuja.</p>
-                  <p id="peakSunHours-error" class="error" aria-live="polite"></p>
+                  <label for="batteryModule">Battery Module</label>
+                  <select id="batteryModule" name="batteryModule" aria-invalid="false" aria-describedby="batteryModule-hint batteryModule-error"></select>
+                  <p id="batteryModule-hint" class="hint">Auto uses the fewest modules with the least spare capacity. A module only appears when its voltage divides the system voltage.</p>
+                  <p id="batteryModule-error" class="error" aria-live="polite"></p>
                 </div>
-                <div class="field">
-                  <label for="autonomyDays">Autonomy (Days)</label>
-                  <input id="autonomyDays" name="autonomyDays" type="number" inputmode="decimal" min="1" max="14" step="any" value="1" aria-describedby="autonomyDays-hint autonomyDays-error">
-                  <p id="autonomyDays-hint" class="hint">Days the battery should cover without sun.</p>
-                  <p id="autonomyDays-error" class="error" aria-live="polite"></p>
+                <div class="field-row fields">
+                  <div class="field">
+                    <label for="inverter">Inverter</label>
+                    <select id="inverter" name="inverter" aria-invalid="false" aria-describedby="inverter-hint inverter-error">
+                      <option value="auto" selected>Auto</option>
+                      <option value="1">1 kVA</option>
+                      <option value="1.5">1.5 kVA</option>
+                      <option value="2">2 kVA</option>
+                      <option value="2.5">2.5 kVA</option>
+                      <option value="3">3 kVA</option>
+                      <option value="3.5">3.5 kVA</option>
+                      <option value="4.2">4.2 kVA</option>
+                      <option value="5">5 kVA</option>
+                      <option value="6.2">6.2 kVA</option>
+                      <option value="7.5">7.5 kVA</option>
+                      <option value="8">8 kVA</option>
+                      <option value="10">10 kVA</option>
+                      <option value="12">12 kVA</option>
+                      <option value="15">15 kVA</option>
+                    </select>
+                    <p id="inverter-hint" class="hint">12V up to 2 kVA, 24V up to 4.2 kVA, 48V from 5 kVA.</p>
+                    <p id="inverter-error" class="error" aria-live="polite"></p>
+                  </div>
+                  <div class="field">
+                    <label for="panelW">Panel Wattage</label>
+                    <select id="panelW" name="panelW" aria-invalid="false" aria-describedby="panelW-error">
+                      <option value="300">300W</option>
+                      <option value="400">400W</option>
+                      <option value="450">450W</option>
+                      <option value="500">500W</option>
+                      <option value="550" selected>550W</option>
+                      <option value="600">600W</option>
+                      <option value="650">650W</option>
+                    </select>
+                    <p id="panelW-error" class="error" aria-live="polite"></p>
+                  </div>
+                </div>
+                <div class="field-row fields">
+                  <div class="field">
+                    <label for="peakSunHours">Peak Sun Hours</label>
+                    <input id="peakSunHours" name="peakSunHours" type="number" inputmode="decimal" min="1" max="12" step="any" value="5" aria-describedby="peakSunHours-hint peakSunHours-error">
+                    <p id="peakSunHours-hint" class="hint">Default 5 for Abuja.</p>
+                    <p id="peakSunHours-error" class="error" aria-live="polite"></p>
+                  </div>
+                  <div class="field">
+                    <label for="autonomyDays">Autonomy (Days)</label>
+                    <input id="autonomyDays" name="autonomyDays" type="number" inputmode="decimal" min="1" max="14" step="any" value="1" aria-describedby="autonomyDays-hint autonomyDays-error">
+                    <p id="autonomyDays-hint" class="hint">Days the battery should cover without sun.</p>
+                    <p id="autonomyDays-error" class="error" aria-live="polite"></p>
+                  </div>
                 </div>
               </div>
             </details>
@@ -679,6 +739,13 @@
           <p id="out-advice" class="advice" hidden></p>
           <dl class="stats">
             <div class="stat">
+              <dt>System</dt>
+              <dd>
+                <span id="out-system"></span>
+                <span id="out-system-sub" class="stat-sub"></span>
+              </dd>
+            </div>
+            <div class="stat">
               <dt>Daily Energy</dt>
               <dd>
                 <span id="out-energy"></span>
@@ -691,6 +758,7 @@
                 <span id="out-battery-kwh"></span>
                 <span id="out-battery-ah" class="stat-sub"></span>
                 <span id="out-battery-config" class="stat-sub"></span>
+                <span id="out-battery-alt" class="stat-sub"></span>
               </dd>
             </div>
             <div class="stat">
@@ -698,6 +766,7 @@
               <dd>
                 <span id="out-inverter"></span>
                 <span id="out-inverter-sub" class="stat-sub"></span>
+                <span id="out-inverter-flags" class="flag"></span>
               </dd>
             </div>
             <div class="stat">
@@ -709,7 +778,10 @@
             </div>
             <div class="stat">
               <dt>Charge Controller</dt>
-              <dd id="out-controller"></dd>
+              <dd>
+                <span id="out-controller"></span>
+                <span id="out-controller-note" class="stat-sub"></span>
+              </dd>
             </div>
           </dl>
           <a id="quote-link" class="btn btn-whatsapp" target="_blank" rel="noopener noreferrer">
@@ -772,11 +844,15 @@
       var resultSummary = document.getElementById("result-summary");
       var quoteLink = document.getElementById("quote-link");
       var advice = document.getElementById("out-advice");
-      var fieldIds = ["load", "hours", "voltage", "batteryType", "peakSunHours", "autonomyDays"];
+      var moduleSelect = document.getElementById("batteryModule");
+      var advanced = document.querySelector(".advanced");
+      var fieldIds = ["load", "hours", "voltage", "batteryType", "batteryModule", "inverter", "panelW", "peakSunHours", "autonomyDays"];
+      var advancedIds = ["batteryModule", "inverter", "panelW", "peakSunHours", "autonomyDays"];
 
       function setError(id, message) {
         var input = document.getElementById(id);
         var error = document.getElementById(id + "-error");
+        if (!error || !input) return;
         error.textContent = message || "";
         input.setAttribute("aria-invalid", message ? "true" : "false");
       }
@@ -788,21 +864,41 @@
         quoteLink.removeAttribute("href");
       }
 
+      function refreshModules() {
+        var chemistry = document.getElementById("batteryType").value;
+        var voltageValue = document.getElementById("voltage").value;
+        var systemV = voltageValue === "auto" ? null : Number(voltageValue);
+        var current = moduleSelect.value || "auto";
+        var modules = SolarCalc.modulesFor(chemistry, systemV);
+        moduleSelect.innerHTML = "";
+        var autoOption = document.createElement("option");
+        autoOption.value = "auto";
+        autoOption.textContent = "Auto";
+        moduleSelect.appendChild(autoOption);
+        modules.forEach(function (module) {
+          var option = document.createElement("option");
+          option.value = module.id;
+          option.textContent = module.label;
+          moduleSelect.appendChild(option);
+        });
+        var stillThere = current === "auto" || modules.some(function (module) { return module.id === current; });
+        moduleSelect.value = stillThere ? current : "auto";
+      }
+
+      refreshModules();
+      document.getElementById("batteryType").addEventListener("change", refreshModules);
+      document.getElementById("voltage").addEventListener("change", refreshModules);
+
       fieldIds.forEach(function (id) {
-        document.getElementById(id).addEventListener("input", function () {
-          setError(id, "");
-        });
-        document.getElementById(id).addEventListener("change", function () {
-          setError(id, "");
-        });
+        var field = document.getElementById(id);
+        field.addEventListener("input", function () { setError(id, ""); });
+        field.addEventListener("change", function () { setError(id, ""); });
       });
 
       form.addEventListener("submit", function (event) {
         event.preventDefault();
         var input = {};
-        fieldIds.forEach(function (id) {
-          input[id] = document.getElementById(id).value;
-        });
+        fieldIds.forEach(function (id) { input[id] = document.getElementById(id).value; });
 
         var outcome = SolarCalc.calcSolar(input);
         fieldIds.forEach(function (id) {
@@ -811,28 +907,35 @@
 
         if (!outcome.ok) {
           hideResults();
+          var advancedError = advancedIds.some(function (id) { return outcome.errors[id]; });
+          if (advancedError) advanced.open = true;
           var first = fieldIds.filter(function (id) { return outcome.errors[id]; })[0];
           if (first) document.getElementById(first).focus();
           return;
         }
 
         var view = SolarCalc.formatResult(outcome);
+        document.getElementById("out-system").textContent = view.system;
+        document.getElementById("out-system-sub").textContent = view.systemSub;
         document.getElementById("out-energy").textContent = view.energy;
         document.getElementById("out-energy-sub").textContent = view.energySub;
         document.getElementById("out-battery-kwh").textContent = view.batteryKwh;
         document.getElementById("out-battery-ah").textContent = view.batteryAh;
         document.getElementById("out-battery-config").textContent = view.batteryConfig;
+        document.getElementById("out-battery-alt").textContent = view.batteryAlt;
         document.getElementById("out-inverter").textContent = view.inverter;
         document.getElementById("out-inverter-sub").textContent = view.inverterSub;
+        document.getElementById("out-inverter-flags").textContent = view.inverterFlags;
         document.getElementById("out-panels").textContent = view.panels;
         document.getElementById("out-panels-sub").textContent = view.panelsSub;
         document.getElementById("out-controller").textContent = view.controller;
+        document.getElementById("out-controller-note").textContent = view.controllerNote;
         document.getElementById("out-assumptions").textContent = outcome.assumptions;
         advice.hidden = !view.advice;
         advice.textContent = view.advice;
 
         quoteLink.href = "https://wa.me/2349032435448?text=" + encodeURIComponent(SolarCalc.formatQuote(outcome));
-        resultSummary.textContent = "Estimate ready. " + view.energy + ". Battery " + view.batteryKwh + ", " + view.batteryAh + ". " + view.batteryConfig + ". Inverter " + view.inverter + ". " + view.panels + ". Charge controller " + view.controller + ".";
+        resultSummary.textContent = "Estimate ready. " + view.system + ", " + view.systemSub + ". " + view.energy + ". Battery " + view.batteryKwh + ", " + view.batteryConfig + ". Inverter " + view.inverter + ". Panels " + view.panels + ". " + view.controller + ".";
         resultEmpty.hidden = true;
         resultBody.hidden = false;
 

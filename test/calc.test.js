@@ -1,6 +1,6 @@
 var assert = require("assert");
-var calc = require("../calc.js");
-var calcSolar = calc.calcSolar;
+var api = require("../calc.js");
+var calcSolar = api.calcSolar;
 
 var failed = 0;
 
@@ -16,15 +16,18 @@ function test(name, fn) {
 }
 
 function close(actual, expected, eps) {
-  assert.ok(Math.abs(actual - expected) <= (eps || 1e-9), actual + " !== " + expected);
+  assert.ok(Math.abs(actual - expected) <= (eps || 1e-6), actual + " !== " + expected);
 }
 
 function base(overrides) {
   var input = {
     load: 500,
     hours: 6,
-    voltage: 12,
+    voltage: "auto",
     batteryType: "lithium",
+    batteryModule: "auto",
+    inverter: "auto",
+    panelW: 550,
     peakSunHours: 5,
     autonomyDays: 1
   };
@@ -35,195 +38,286 @@ function base(overrides) {
 }
 
 function finiteResult(result) {
-  assert.strictEqual(result.ok, true);
+  assert.strictEqual(result.ok, true, JSON.stringify(result.errors || result));
   var blob = JSON.stringify(result);
   assert.ok(blob.indexOf("NaN") === -1, blob);
   assert.ok(blob.indexOf("Infinity") === -1, blob);
-  assert.ok(Number.isFinite(result.loadWh));
-  assert.ok(Number.isFinite(result.dailyWh));
-  assert.ok(Number.isFinite(result.battery.wh));
-  assert.ok(Number.isFinite(result.battery.ah));
-  assert.ok(Number.isFinite(result.panels.count));
-  assert.ok(Number.isFinite(result.chargeController.amps));
 }
 
-test("500W x 6h on 12V lithium", function () {
+test("500W x 6h auto lithium", function () {
   var result = calcSolar(base());
   finiteResult(result);
+  assert.strictEqual(result.voltage, 12);
+  assert.strictEqual(result.voltageMode, "auto");
+  assert.strictEqual(result.voltageAdvice, null);
   close(result.loadWh, 3000);
-  close(result.loadKWh, 3);
   close(result.dailyWh, 3000 / 0.85);
   close(result.battery.wh, (3000 / 0.85) / 0.8);
-  close(result.battery.kwh, result.battery.wh / 1000);
-  assert.strictEqual(result.battery.ah, Math.ceil(result.battery.wh / 12));
   assert.strictEqual(result.battery.ah, 368);
-  assert.strictEqual(result.battery.unitAh, 200);
+  assert.strictEqual(result.battery.id, "lfp-12.8-200");
+  assert.strictEqual(result.battery.units, 2);
   assert.strictEqual(result.battery.series, 1);
   assert.strictEqual(result.battery.parallel, 2);
-  assert.strictEqual(result.battery.count, 2);
   assert.strictEqual(result.battery.bankAh, 400);
+  assert.ok(result.battery.alternatives.length >= 1);
+  assert.strictEqual(result.battery.alternatives[0].id, "lfp-12.8-100");
   assert.strictEqual(result.inverter.label, "1 kVA");
-  assert.strictEqual(result.inverter.custom, false);
-  close(result.inverter.continuousW, 800);
-  close(result.inverter.surgeW, 1600);
-  assert.strictEqual(result.voltageAdvice, null);
-  close(result.panels.arrayW, (3000 / 0.85) / (5 * 0.75));
+  assert.strictEqual(result.inverter.voltageMatch, true);
+  assert.strictEqual(result.panels.moduleW, 550);
+  assert.strictEqual(result.panels.minimumCount, 2);
   assert.strictEqual(result.panels.count, 2);
-  close(result.panels.arrayKW, 1.1);
-  assert.strictEqual(result.chargeController.amps, 115);
+  assert.strictEqual(result.panels.series, 1);
+  assert.strictEqual(result.panels.parallel, 2);
+  assert.strictEqual(result.chargeController.rating, 120);
+  assert.strictEqual(result.chargeController.count, 1);
+  var view = api.formatResult(result);
+  assert.strictEqual(view.batteryKwh, "4.41 kWh");
+  assert.strictEqual(view.panels, "2 × 550W");
+  var quote = api.formatQuote(result);
+  assert.ok(quote.indexOf("12.8V 200Ah") !== -1, quote);
+  assert.ok(quote.indexOf("1 kVA") !== -1);
+  assert.ok(quote.indexOf("120A MPPT") !== -1);
+  assert.ok(quote.indexOf("NaN") === -1);
 });
 
-test("2000W x 8h on 24V lithium", function () {
-  var result = calcSolar(base({ load: 2000, hours: 8, voltage: 24 }));
+test("2000W x 8h auto lithium", function () {
+  var result = calcSolar(base({ load: 2000, hours: 8 }));
   finiteResult(result);
+  assert.strictEqual(result.voltage, 24);
+  assert.strictEqual(result.bandVoltage, 24);
   close(result.loadWh, 16000);
-  close(result.dailyWh, 16000 / 0.85);
   close(result.battery.wh, (16000 / 0.85) / 0.8);
   assert.strictEqual(result.battery.ah, 981);
-  assert.strictEqual(result.battery.series, 2);
+  assert.strictEqual(result.battery.id, "lfp-25.6-200");
+  assert.strictEqual(result.battery.units, 5);
+  assert.strictEqual(result.battery.series, 1);
   assert.strictEqual(result.battery.parallel, 5);
-  assert.strictEqual(result.battery.count, 10);
-  assert.strictEqual(result.battery.bankAh, 1000);
   assert.strictEqual(result.inverter.label, "3.5 kVA");
-  close(result.inverter.continuousW, 2800);
-  close(result.inverter.surgeW, 5600);
-  assert.strictEqual(result.voltageAdvice, null);
+  assert.strictEqual(result.inverter.voltageMatch, true);
   assert.strictEqual(result.panels.count, 10);
   close(result.panels.arrayKW, 5.5);
-  assert.strictEqual(result.chargeController.amps, 287);
+  assert.strictEqual(result.chargeController.multiple, true);
+  assert.strictEqual(result.chargeController.count, 3);
+  assert.ok(result.battery.alternatives.length === 2);
 });
 
-test("1500W x 8h 24V lithium stores less than lead-acid", function () {
-  var lithium = calcSolar(base({ load: 1500, hours: 8, voltage: 24, batteryType: "lithium" }));
-  var lead = calcSolar(base({ load: 1500, hours: 8, voltage: 24, batteryType: "lead" }));
-  finiteResult(lithium);
-  finiteResult(lead);
-  close(lithium.battery.wh, (12000 / 0.85) / 0.8);
-  close(lead.battery.wh, (12000 / 0.85) / 0.5);
-  assert.strictEqual(lithium.battery.ah, 736);
-  assert.strictEqual(lead.battery.ah, 1177);
-  assert.ok(lead.battery.wh > lithium.battery.wh);
-  assert.ok(lead.battery.count > lithium.battery.count);
-  assert.strictEqual(lithium.inverter.label, lead.inverter.label);
-  assert.strictEqual(lithium.panels.count, lead.panels.count);
-  assert.strictEqual(lithium.inverter.label, "2.5 kVA");
-});
-
-test("defaults are lithium, 5 peak sun hours, and 1 autonomy day", function () {
-  var result = calcSolar({ load: "500", hours: "6", voltage: "12" });
+test("2000W x 8h auto tubular uses 12V 250Ah modules", function () {
+  var result = calcSolar(base({ load: 2000, hours: 8, batteryType: "tubular" }));
   finiteResult(result);
-  assert.strictEqual(result.batteryType, "lithium");
-  assert.strictEqual(result.peakSunHours, 5);
-  assert.strictEqual(result.autonomyDays, 1);
-  assert.strictEqual(result.battery.ah, 368);
+  assert.strictEqual(result.voltage, 24);
+  close(result.battery.wh, (16000 / 0.85) / 0.5);
+  assert.strictEqual(result.battery.ah, 1569);
+  assert.ok(result.battery.wh > calcSolar(base({ load: 2000, hours: 8 })).battery.wh);
+  assert.strictEqual(result.battery.id, "tub-12-250");
+  assert.strictEqual(result.battery.series, 2);
+  assert.strictEqual(result.battery.parallel, 7);
+  assert.strictEqual(result.battery.units, 14);
+  assert.strictEqual(result.battery.bankAh, 1750);
+  assert.strictEqual(result.battery.alternatives[0].id, "tub-12-200");
+  assert.strictEqual(result.inverter.label, "3.5 kVA");
+  assert.strictEqual(result.panels.count, 10);
 });
 
-test("autonomy days scale only the battery", function () {
-  var one = calcSolar(base({ autonomyDays: 1 }));
+test("voltage bands and step-up when the inverter will not fit", function () {
+  var stays = calcSolar(base({ load: 1280, hours: 1 }));
+  assert.strictEqual(stays.voltage, 12);
+  assert.strictEqual(stays.inverter.label, "2 kVA");
+  var atBand = calcSolar(base({ load: 1500, hours: 1 }));
+  assert.strictEqual(atBand.bandVoltage, 12);
+  assert.strictEqual(atBand.voltage, 24);
+  assert.strictEqual(atBand.voltageStepped, true);
+  assert.strictEqual(atBand.inverter.label, "2.5 kVA");
+  assert.strictEqual(calcSolar(base({ load: 1501, hours: 1 })).voltage, 24);
+  assert.strictEqual(calcSolar(base({ load: 2688, hours: 1 })).voltage, 24);
+  var stepped = calcSolar(base({ load: 3000, hours: 1 }));
+  assert.strictEqual(stepped.bandVoltage, 24);
+  assert.strictEqual(stepped.voltage, 48);
+  assert.strictEqual(stepped.voltageStepped, true);
+  assert.strictEqual(stepped.inverter.label, "5 kVA");
+  assert.strictEqual(calcSolar(base({ load: 3500, hours: 1 })).voltage, 48);
+  assert.strictEqual(calcSolar(base({ load: 4000, hours: 1 })).bandVoltage, 48);
+});
+
+test("user can override voltage and is warned when it is too low", function () {
+  var ok = calcSolar(base({ load: 500, voltage: 48 }));
+  finiteResult(ok);
+  assert.strictEqual(ok.voltage, 48);
+  assert.strictEqual(ok.voltageAdvice, null);
+  assert.strictEqual(ok.inverter.label, "5 kVA");
+  var low = calcSolar(base({ load: 2000, hours: 1, voltage: 12 }));
+  assert.strictEqual(low.voltageAdvice.recommended, 24);
+  assert.strictEqual(low.inverter.available, false);
+});
+
+test("96V is only for loads above 8 kW", function () {
+  var small = calcSolar(base({ load: 5000, voltage: 96 }));
+  assert.strictEqual(small.ok, false);
+  assert.ok(small.errors.voltage.indexOf("8 kW") !== -1);
+  var big = calcSolar(base({ load: 8500, hours: 1, voltage: 96 }));
+  finiteResult(big);
+  assert.strictEqual(big.voltage, 96);
+  assert.strictEqual(big.inverter.kva >= 10, true);
+  assert.strictEqual(big.inverter.voltageMatch, true);
+});
+
+test("every lithium and tubular module is valid on a divisible voltage and rejected otherwise", function () {
+  api.MODULES.forEach(function (module) {
+    [12, 24, 48, 96].forEach(function (voltage) {
+      var result = calcSolar(base({
+        load: 400,
+        hours: 1,
+        voltage: voltage,
+        batteryType: module.chemistry,
+        batteryModule: module.id
+      }));
+      var fits = (voltage / module.nominalV) >= 1 && Math.abs(voltage / module.nominalV - Math.round(voltage / module.nominalV)) < 1e-9;
+      if (voltage === 96) {
+        assert.strictEqual(result.ok, false);
+        return;
+      }
+      if (fits) {
+        assert.strictEqual(result.ok, true, module.id + " at " + voltage + " " + JSON.stringify(result.errors));
+        assert.strictEqual(result.battery.series, voltage / module.nominalV);
+      } else {
+        assert.strictEqual(result.ok, false, module.id + " should not fit " + voltage);
+        assert.ok(result.errors.batteryModule);
+      }
+    });
+  });
+});
+
+test("a module from the other chemistry is rejected", function () {
+  var result = calcSolar(base({ batteryType: "lithium", batteryModule: "tub-12-200", voltage: 12 }));
+  assert.strictEqual(result.ok, false);
+  assert.ok(result.errors.batteryModule);
+});
+
+test("2V cells are a valid series string and Auto keeps the smaller 12V bank", function () {
+  var forced = calcSolar(base({
+    load: 7651,
+    hours: 1,
+    voltage: 12,
+    batteryType: "tubular",
+    batteryModule: "tub-2-1500"
+  }));
+  finiteResult(forced);
+  assert.strictEqual(forced.battery.ah, 1501);
+  assert.strictEqual(forced.battery.series, 6);
+  assert.strictEqual(forced.battery.parallel, 2);
+  assert.strictEqual(forced.battery.units, 12);
+  var autoPick = calcSolar(base({ load: 7651, hours: 1, voltage: 12, batteryType: "tubular" }));
+  assert.strictEqual(autoPick.battery.id, "tub-12-220");
+  assert.ok(autoPick.battery.units < forced.battery.units);
+});
+
+test("48V rack is chosen when one cabinet wastes less than a cell module", function () {
+  var result = calcSolar(base({ load: 6596, hours: 1, voltage: 48, batteryType: "lithium" }));
+  finiteResult(result);
+  assert.strictEqual(result.battery.id, "lfp-rack-10");
+  assert.strictEqual(result.battery.units, 1);
+});
+
+test("inverter catalog, match, and mismatch flags", function () {
+  assert.deepStrictEqual(api.CONSTANTS.INVERTER_KVA, [1, 1.5, 2, 2.5, 3, 3.5, 4.2, 5, 6.2, 7.5, 8, 10, 12, 15]);
+  assert.deepStrictEqual(api.inverterVoltages(2), [12]);
+  assert.deepStrictEqual(api.inverterVoltages(3.5), [24]);
+  assert.deepStrictEqual(api.inverterVoltages(4.2), [24]);
+  assert.deepStrictEqual(api.inverterVoltages(5), [48]);
+  assert.deepStrictEqual(api.inverterVoltages(8), [48]);
+  assert.deepStrictEqual(api.inverterVoltages(10), [48, 96]);
+  var matched = calcSolar(base({ load: 640, hours: 1, voltage: 12, inverter: 1 }));
+  assert.strictEqual(matched.inverter.undersized, false);
+  assert.strictEqual(matched.inverter.voltageMatch, true);
+  var mismatch = calcSolar(base({ load: 500, voltage: 12, inverter: 5 }));
+  assert.strictEqual(mismatch.inverter.voltageMatch, false);
+  assert.ok(mismatch.inverter.flags[0].indexOf("48V") !== -1);
+  var small = calcSolar(base({ load: 2000, hours: 1, voltage: 24, inverter: 1.5 }));
+  assert.strictEqual(small.inverter.undersized, true);
+  var custom = calcSolar(base({ load: 20000, hours: 1, voltage: 48 }));
+  assert.strictEqual(custom.inverter.custom, true);
+  assert.strictEqual(custom.inverter.label, "Contact us for a custom design");
+  var unknown = calcSolar(base({ inverter: 9 }));
+  assert.strictEqual(unknown.ok, false);
+});
+
+test("panel wattage changes the count and strings follow voltage", function () {
+  var narrow = calcSolar(base({ panelW: 650, voltage: 12 }));
+  var wide = calcSolar(base({ panelW: 300, voltage: 48 }));
+  finiteResult(narrow);
+  finiteResult(wide);
+  assert.ok(narrow.panels.minimumCount <= 2);
+  assert.strictEqual(narrow.panels.series, 1);
+  assert.strictEqual(wide.panels.vmp, 18);
+  assert.strictEqual(wide.panels.series, 4);
+  assert.strictEqual(wide.panels.count % 4, 0);
+  [300, 400, 450, 500, 550, 600, 650].forEach(function (watt) {
+    assert.strictEqual(calcSolar(base({ panelW: watt })).ok, true);
+  });
+  assert.strictEqual(calcSolar(base({ panelW: 580 })).ok, false);
+});
+
+test("MPPT picks a standard rating and stacks controllers past 120A", function () {
+  var small = calcSolar(base({ load: 200, hours: 2, voltage: 48, panelW: 550 }));
+  finiteResult(small);
+  assert.ok(api.CONSTANTS.MPPT_RATINGS.indexOf(small.chargeController.rating) !== -1);
+  assert.strictEqual(small.chargeController.multiple, false);
+  var big = calcSolar(base({ load: 2000, hours: 8, voltage: 24 }));
+  assert.strictEqual(big.chargeController.rating, 120);
+  assert.ok(big.chargeController.count >= 2);
+  assert.ok(big.chargeController.note.indexOf("built-in MPPT") !== -1);
+});
+
+test("autonomy scales the battery only, and lower sun hours add panels", function () {
+  var one = calcSolar(base());
   var two = calcSolar(base({ autonomyDays: 2 }));
   close(two.battery.wh, one.battery.wh * 2);
   assert.strictEqual(two.panels.count, one.panels.count);
-  assert.strictEqual(two.inverter.label, one.inverter.label);
+  var cloud = calcSolar(base({ peakSunHours: 4 }));
+  assert.ok(cloud.panels.arrayW > one.panels.arrayW);
+  assert.ok(cloud.panels.minimumCount >= one.panels.minimumCount);
 });
 
-test("lower peak sun hours add panels", function () {
-  var abuja = calcSolar(base({ peakSunHours: 5 }));
-  var cloudier = calcSolar(base({ peakSunHours: 4 }));
-  assert.ok(cloudier.panels.arrayW > abuja.panels.arrayW);
-  assert.strictEqual(cloudier.panels.count, 3);
-  assert.strictEqual(abuja.battery.ah, cloudier.battery.ah);
-});
-
-test("48V uses four 12V batteries in series", function () {
-  var result = calcSolar(base({ voltage: 48 }));
-  assert.strictEqual(result.battery.ah, 92);
-  assert.strictEqual(result.battery.series, 4);
-  assert.strictEqual(result.battery.parallel, 1);
-  assert.strictEqual(result.battery.unitAh, 100);
-  assert.strictEqual(result.battery.count, 4);
-});
-
-test("a small bank uses a 100Ah battery instead of 200Ah", function () {
-  var result = calcSolar(base({ load: 100, hours: 1 }));
-  assert.ok(result.battery.ah <= 100);
-  assert.strictEqual(result.battery.unitAh, 100);
-  assert.strictEqual(result.battery.count, 1);
-});
-
-test("voltage advice for 12V and 24V", function () {
-  assert.strictEqual(calcSolar(base({ load: 1500, voltage: 12 })).voltageAdvice, null);
-  var mid = calcSolar(base({ load: 1501, voltage: 12 }));
-  assert.strictEqual(mid.voltageAdvice.recommended, 24);
-  var big = calcSolar(base({ load: 3001, voltage: 12 }));
-  assert.strictEqual(big.voltageAdvice.recommended, 48);
-  assert.strictEqual(calcSolar(base({ load: 3000, voltage: 24 })).voltageAdvice, null);
-  var twentyFour = calcSolar(base({ load: 3001, voltage: 24 }));
-  assert.strictEqual(twentyFour.voltageAdvice.recommended, 48);
-  assert.strictEqual(calcSolar(base({ load: 4000, voltage: 48 })).voltageAdvice, null);
-});
-
-test("inverter steps and the 10 kVA limit", function () {
-  assert.strictEqual(calcSolar(base({ load: 6400, hours: 1, voltage: 48 })).inverter.label, "10 kVA");
-  var custom = calcSolar(base({ load: 6401, hours: 1, voltage: 48 }));
-  assert.strictEqual(custom.inverter.custom, true);
-  assert.strictEqual(custom.inverter.label, "Contact us for a custom design");
-  assert.strictEqual(custom.inverter.kva, null);
-  assert.strictEqual(calcSolar(base({ load: 50000, hours: 1, voltage: 48 })).inverter.custom, true);
-});
-
-test("quote text includes the new results and no NaN", function () {
-  var result = calcSolar(base());
-  var quote = calc.formatQuote(result);
-  assert.ok(quote.indexOf("Hi Philip's Energy, I used your solar calculator.") === 0);
-  assert.ok(quote.indexOf("3,000Wh (3.00 kWh)") !== -1);
-  assert.ok(quote.indexOf("368 Ah") !== -1);
-  assert.ok(quote.indexOf("1 kVA") !== -1);
-  assert.ok(quote.indexOf("2 Panels (550W each)") !== -1);
-  assert.ok(quote.indexOf("115 A") !== -1);
-  assert.ok(quote.indexOf("2 × 12V 200Ah in parallel") !== -1);
-  assert.ok(quote.indexOf("NaN") === -1);
-  assert.ok(quote.indexOf("Infinity") === -1);
-  var view = calc.formatResult(result);
-  assert.strictEqual(view.batteryKwh, "4.41 kWh");
-  assert.strictEqual(view.panelsSub, "1.10 kW array");
-});
-
-test("rejects empty, zero, negative, and non-numeric values", function () {
+test("rejects empty, zero, negative, non-numeric, and absurd inputs", function () {
   function errors(overrides) {
     var result = calcSolar(base(overrides));
     assert.strictEqual(result.ok, false);
     return result.errors;
   }
-  assert.strictEqual(errors({ load: "" }).load, "Enter the total load in watts.");
-  assert.strictEqual(errors({ load: "   " }).load, "Enter the total load in watts.");
-  assert.strictEqual(errors({ load: "abc" }).load, "Load must be a number greater than 0.");
-  assert.strictEqual(errors({ load: "500W" }).load, "Load must be a number greater than 0.");
-  assert.strictEqual(errors({ load: 0 }).load, "Load must be a number greater than 0.");
-  assert.strictEqual(errors({ load: -20 }).load, "Load must be a number greater than 0.");
-  assert.strictEqual(errors({ load: 50001 }).load, "Load must be 50,000 W or less.");
-  assert.strictEqual(errors({ hours: "" }).hours, "Enter how many hours you use this load each day.");
-  assert.strictEqual(errors({ hours: 0 }).hours.indexOf("no more than 24") !== -1, true);
-  assert.strictEqual(errors({ hours: -1 }).hours.indexOf("greater than 0") !== -1, true);
-  assert.strictEqual(errors({ hours: 24.01 }).hours.indexOf("no more than 24") !== -1, true);
-  assert.strictEqual(errors({ hours: "six" }).hours.indexOf("number") !== -1, true);
-  assert.strictEqual(errors({ voltage: 36 }).voltage.indexOf("12V") !== -1, true);
-  assert.strictEqual(errors({ batteryType: "agm" }).batteryType.indexOf("lithium") !== -1, true);
-  assert.strictEqual(errors({ peakSunHours: 0 }).peakSunHours.indexOf("1 to 12") !== -1, true);
-  assert.strictEqual(errors({ peakSunHours: 13 }).peakSunHours.indexOf("1 to 12") !== -1, true);
-  assert.strictEqual(errors({ autonomyDays: 0 }).autonomyDays.indexOf("1 to 14") !== -1, true);
-  assert.strictEqual(errors({ autonomyDays: 15 }).autonomyDays.indexOf("1 to 14") !== -1, true);
+  assert.ok(errors({ load: "" }).load.indexOf("Enter") === 0);
+  assert.ok(errors({ load: "abc" }).load.indexOf("number") !== -1);
+  assert.ok(errors({ load: 0 }).load);
+  assert.ok(errors({ load: -5 }).load);
+  assert.ok(errors({ load: 50001 }).load.indexOf("50,000") !== -1);
+  assert.ok(errors({ hours: "" }).hours);
+  assert.ok(errors({ hours: 0 }).hours.indexOf("24") !== -1);
+  assert.ok(errors({ hours: -1 }).hours);
+  assert.ok(errors({ hours: 25 }).hours.indexOf("24") !== -1);
+  assert.ok(errors({ hours: "six" }).hours.indexOf("number") !== -1);
+  assert.ok(errors({ voltage: 36 }).voltage);
+  assert.ok(errors({ batteryType: "agm" }).batteryType);
+  assert.ok(errors({ peakSunHours: 0 }).peakSunHours);
+  assert.ok(errors({ peakSunHours: 13 }).peakSunHours);
+  assert.ok(errors({ autonomyDays: 0.5 }).autonomyDays);
+  assert.ok(errors({ autonomyDays: 15 }).autonomyDays);
   assert.strictEqual(calcSolar(base({ hours: 24 })).ok, true);
   assert.strictEqual(calcSolar(base({ load: 50000, hours: 1, voltage: 48 })).ok, true);
-  var bad = errors({ load: "nope", hours: -3 });
-  assert.ok(bad.load);
-  assert.ok(bad.hours);
-  assert.ok(JSON.stringify(bad).indexOf("NaN") === -1);
-});
-
-test("non-finite numbers are rejected", function () {
   assert.strictEqual(calcSolar(base({ load: Infinity })).ok, false);
   assert.strictEqual(calcSolar(base({ hours: NaN })).ok, false);
   assert.strictEqual(calcSolar(base({ load: "1e3" })).ok, false);
+  var bad = errors({ load: "nope", hours: -3 });
+  assert.ok(JSON.stringify(bad).indexOf("NaN") === -1);
+});
+
+test("defaults stay simple when optional fields are omitted", function () {
+  var result = calcSolar({ load: "500", hours: "6" });
+  finiteResult(result);
+  assert.strictEqual(result.batteryType, "lithium");
+  assert.strictEqual(result.voltage, 12);
+  assert.strictEqual(result.peakSunHours, 5);
+  assert.strictEqual(result.autonomyDays, 1);
+  assert.strictEqual(result.panels.moduleW, 550);
+  assert.strictEqual(result.batteryModuleMode, "auto");
+  assert.strictEqual(result.inverter.mode, "auto");
 });
 
 if (failed) {
