@@ -1,4 +1,4 @@
-/* Off-grid sizing for Philip's Energy.
+/* Off-grid sizing for GridPoint Sunrise Energy.
  *
  * loadWh     = watts × hours
  * dailyWh    = loadWh / 0.85
@@ -823,7 +823,7 @@
   function formatQuote(result) {
     var view = formatResult(result);
     var lines = [
-      "Hi Philip's Energy, I used your solar calculator.",
+      "Hi GridPoint Sunrise Energy, I used your solar calculator.",
       "",
       "Load: " + result.loadW + "W for " + result.hours + " hours/day",
       "System: " + view.system + " (" + view.systemSub + ")",

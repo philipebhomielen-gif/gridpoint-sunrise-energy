@@ -1,8 +1,6 @@
-# Philip's Energy — Solar Calculator
+# GridPoint Sunrise Energy — Solar Calculator
 
-Static solar system sizing page for Philip's Energy. Open `index.html` in a browser, or use the published site:
-
-https://philipebhomielen-gif.github.io/philipsenergy/
+Static solar system sizing page for GridPoint Sunrise Energy. Open `index.html` in a browser. Assets use relative paths (`favicon.svg`, `calc.js`), so the page keeps working if the repository is renamed to `gridpoint-sunrise-energy`.
 
 No build step. The site is plain HTML, CSS, and JavaScript.
 
@@ -34,16 +32,16 @@ Run the checks with:
 node test/calc.test.js
 ```
 
-## What Philip's Energy does
+## What GridPoint Sunrise Energy does
 
-Philip's Energy sells and supplies solar panels and solar equipment for installation, including inverters, batteries, and accessories. We deliver across FCT, Abuja.
+GridPoint Sunrise Energy sells and supplies solar panels and solar equipment for installation, including inverters, batteries, and accessories. We deliver across FCT, Abuja.
 
 ## Contact
 
 - WhatsApp: [0903 243 5448](https://wa.me/2349032435448)
 - Call: [0803 836 8456](tel:+2348038368456)
 
-The WhatsApp button opens a chat that starts with “Hi Philip's Energy, I used your solar calculator”. After a calculation, **Get a quote on WhatsApp** opens a chat that includes the estimate.
+The WhatsApp button opens a chat that starts with “Hi GridPoint Sunrise Energy, I used your solar calculator”. After a calculation, **Get a quote on WhatsApp** opens a chat that includes the estimate.
 
 ## Publish
 
