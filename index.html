@@ -187,16 +187,72 @@
       font-size: 1.05rem;
     }
 
-    .hero-logo-wrap {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .hero-card {
+      background: var(--green);
+      color: #f7f4ee;
+      border-radius: var(--radius);
+      padding: 22px;
+      box-shadow: var(--shadow);
     }
 
-    .hero-logo {
+    .array {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+
+    .sun {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 40%, #ffe08a, var(--sun) 62%);
+      box-shadow: 0 0 0 8px rgba(224, 165, 38, 0.22);
+    }
+
+    .panels {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .panels span {
       display: block;
-      width: min(100%, 400px);
-      height: auto;
+      height: 34px;
+      border-radius: 4px;
+      background:
+        linear-gradient(#d5e4ff 1px, transparent 1px) 0 0 / 100% 50%,
+        linear-gradient(90deg, #d5e4ff 1px, transparent 1px) 0 0 / 34% 100%,
+        linear-gradient(180deg, #3c78e0, #173e86);
+      border: 1px solid rgba(255, 255, 255, 0.45);
+    }
+
+    .hero-card ol {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+    }
+
+    .hero-card li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+    }
+
+    .hero-card li span {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(224, 165, 38, 0.18);
+      color: #ffd56a;
+      font-size: 0.75rem;
+      font-weight: 800;
     }
 
     .layout {
@@ -555,8 +611,20 @@
           <h1>Solar System Sizing Tool</h1>
           <p class="lede">Estimate daily energy, battery capacity, inverter size, and how many 550W panels to install. Then send the result to GridPoint Sunrise Energy for a quote.</p>
         </div>
-        <aside class="hero-logo-wrap">
-          <img class="hero-logo" src="assets/logo.png" width="400" height="356" alt="GridPoint Energy. Reliable supply. Brighter future.">
+        <aside class="hero-card">
+          <div class="array" aria-hidden="true">
+            <div class="sun"></div>
+            <div class="panels">
+              <span></span><span></span><span></span>
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+          <ol>
+            <li><span>01</span> Daily energy</li>
+            <li><span>02</span> Battery bank</li>
+            <li><span>03</span> Inverter tier</li>
+            <li><span>04</span> Solar panels</li>
+          </ol>
         </aside>
       </div>
     </section>
