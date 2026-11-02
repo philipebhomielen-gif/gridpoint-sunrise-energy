@@ -1,6 +1,6 @@
 # GridPoint Sunrise Energy — Solar Calculator
 
-Static solar system sizing page for GridPoint Sunrise Energy. Open `index.html` in a browser. Assets use relative paths (`favicon.svg`, `calc.js`), so the page keeps working if the repository is renamed to `gridpoint-sunrise-energy`.
+Static solar system sizing page for GridPoint Sunrise Energy. Open `index.html` in a browser. Assets use relative paths (`assets/logo.png`, `assets/favicon-32.png`, `calc.js`), so the page keeps working if the repository is renamed to `gridpoint-sunrise-energy`.
 
 No build step. The site is plain HTML, CSS, and JavaScript.
 

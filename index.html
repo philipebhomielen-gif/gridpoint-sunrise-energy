@@ -4,18 +4,23 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Size a solar system with GridPoint Sunrise Energy in Abuja. Estimate daily energy, battery capacity, inverter size, and how many 550W panels you need. We deliver across FCT, Abuja.">
-  <meta name="theme-color" content="#0f3d2e">
+  <meta name="theme-color" content="#2f4f14">
   <meta name="format-detection" content="telephone=no">
+  <meta property="og:title" content="GridPoint Sunrise Energy - Solar Calculator">
+  <meta property="og:description" content="Size a solar system with GridPoint Sunrise Energy in Abuja. Estimate daily energy, battery capacity, inverter size, and how many 550W panels you need. We deliver across FCT, Abuja.">
+  <meta property="og:image" content="assets/logo.png">
+  <meta property="og:type" content="website">
   <title>GridPoint Sunrise Energy - Solar Calculator</title>
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <style>
     :root {
       --ink: #17241c;
-      --green: #0f3d2e;
-      --green-deep: #0b2e22;
-      --leaf: #1f6b4a;
-      --sun: #e39b14;
-      --sun-deep: #8a5a09;
+      --green: #2f4f14;
+      --green-deep: #243c0e;
+      --leaf: #3d6418;
+      --sun: #e0a526;
+      --sun-deep: #8a6412;
       --cream: #f3efe4;
       --card: #fffdf8;
       --line: #e3d9c8;
@@ -39,8 +44,8 @@
       min-height: 100vh;
       color: var(--ink);
       background:
-        radial-gradient(900px 380px at 100% -8%, rgba(227, 155, 20, 0.2), transparent 58%),
-        radial-gradient(680px 320px at -12% 0%, rgba(31, 107, 74, 0.12), transparent 55%),
+        radial-gradient(900px 380px at 100% -8%, rgba(224, 165, 38, 0.22), transparent 58%),
+        radial-gradient(680px 320px at -12% 0%, rgba(47, 79, 20, 0.12), transparent 55%),
         var(--cream);
       font-family: "Segoe UI", system-ui, sans-serif;
       font-size: 1rem;
@@ -106,7 +111,12 @@
       text-decoration: none;
     }
 
-    .brand svg { width: 40px; height: 40px; flex: none; }
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      flex: none;
+      object-fit: contain;
+    }
 
     .brand-name {
       font-family: Georgia, "Iowan Old Style", Palatino, serif;
@@ -177,72 +187,16 @@
       font-size: 1.05rem;
     }
 
-    .hero-card {
-      background: var(--green);
-      color: #f7f4ee;
-      border-radius: var(--radius);
-      padding: 22px;
-      box-shadow: var(--shadow);
-    }
-
-    .array {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 16px;
-      align-items: center;
-      margin-bottom: 18px;
-    }
-
-    .sun {
-      width: 54px;
-      height: 54px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 40% 40%, #ffe08a, var(--sun) 62%);
-      box-shadow: 0 0 0 8px rgba(227, 155, 20, 0.22);
-    }
-
-    .panels {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6px;
-    }
-
-    .panels span {
-      display: block;
-      height: 34px;
-      border-radius: 4px;
-      background:
-        linear-gradient(#d5e4ff 1px, transparent 1px) 0 0 / 100% 50%,
-        linear-gradient(90deg, #d5e4ff 1px, transparent 1px) 0 0 / 34% 100%,
-        linear-gradient(180deg, #3c78e0, #173e86);
-      border: 1px solid rgba(255, 255, 255, 0.45);
-    }
-
-    .hero-card ol {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      display: grid;
-      gap: 8px;
-    }
-
-    .hero-card li {
+    .hero-logo-wrap {
       display: flex;
       align-items: center;
-      gap: 10px;
-      font-weight: 700;
+      justify-content: center;
     }
 
-    .hero-card li span {
-      width: 28px;
-      height: 28px;
-      display: grid;
-      place-items: center;
-      border-radius: 50%;
-      background: rgba(227, 155, 20, 0.18);
-      color: #ffd56a;
-      font-size: 0.75rem;
-      font-weight: 800;
+    .hero-logo {
+      display: block;
+      width: min(100%, 400px);
+      height: auto;
     }
 
     .layout {
@@ -479,7 +433,7 @@
       display: grid;
       gap: 18px;
       background:
-        linear-gradient(160deg, rgba(227, 155, 20, 0.14), transparent 42%),
+        linear-gradient(160deg, rgba(224, 165, 38, 0.16), transparent 42%),
         var(--card);
     }
 
@@ -503,6 +457,15 @@
       text-align: center;
       color: var(--muted);
       font-size: 0.95rem;
+    }
+
+    .site-footer .tagline {
+      margin: 0 0 6px;
+      color: var(--sun-deep);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
     }
 
     .visually-hidden {
@@ -570,18 +533,9 @@
   <header class="site-header">
     <div class="wrap header-inner">
       <a class="brand" href="#top">
-        <svg viewBox="0 0 40 40" aria-hidden="true">
-          <rect width="40" height="40" rx="10" fill="#0f3d2e"/>
-          <circle cx="20" cy="16" r="5.2" fill="#f0b429"/>
-          <g stroke="#f0b429" stroke-width="1.6" stroke-linecap="round">
-            <path d="M20 6.2v2.2M20 23.6v2.2M9.2 16h2.2M28.6 16h2.2"/>
-            <path d="M12.2 8.4l1.6 1.6M26.2 22l1.6 1.6M12.2 23.6l1.6-1.6M26.2 10l1.6-1.6"/>
-          </g>
-          <path d="M8 33h24l-3-5.6H11z" fill="#1f6b4a"/>
-          <path d="M12.2 29.6h3.2M18.4 29.6h3.2M24.6 29.6h3.2" stroke="#f7f4ee" stroke-width="1.3" stroke-linecap="round"/>
-        </svg>
+        <img class="brand-mark" src="assets/logo-mark.png" width="48" height="48" alt="">
         <span>
-          <span class="brand-name">GridPoint Sunrise Energy</span>
+          <span class="brand-name">GridPoint Energy</span>
           <span class="brand-tag">Solar calculator</span>
         </span>
       </a>
@@ -601,20 +555,8 @@
           <h1>Solar System Sizing Tool</h1>
           <p class="lede">Estimate daily energy, battery capacity, inverter size, and how many 550W panels to install. Then send the result to GridPoint Sunrise Energy for a quote.</p>
         </div>
-        <aside class="hero-card">
-          <div class="array" aria-hidden="true">
-            <div class="sun"></div>
-            <div class="panels">
-              <span></span><span></span><span></span>
-              <span></span><span></span><span></span>
-            </div>
-          </div>
-          <ol>
-            <li><span>01</span> Daily energy</li>
-            <li><span>02</span> Battery bank</li>
-            <li><span>03</span> Inverter tier</li>
-            <li><span>04</span> Solar panels</li>
-          </ol>
+        <aside class="hero-logo-wrap">
+          <img class="hero-logo" src="assets/logo.png" width="400" height="356" alt="GridPoint Energy. Reliable supply. Brighter future.">
         </aside>
       </div>
     </section>
@@ -832,6 +774,7 @@
 
   <footer class="site-footer">
     <div class="wrap">
+      <p class="tagline">Reliable supply. Brighter future.</p>
       <p>Powered by GridPoint Sunrise Energy</p>
     </div>
   </footer>
