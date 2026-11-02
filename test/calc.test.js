@@ -66,8 +66,10 @@ test("500W x 6h auto lithium", function () {
   assert.strictEqual(result.panels.moduleW, 550);
   assert.strictEqual(result.panels.minimumCount, 2);
   assert.strictEqual(result.panels.count, 2);
-  assert.strictEqual(result.panels.series, 1);
-  assert.strictEqual(result.panels.parallel, 2);
+  assert.strictEqual(result.panels.series, 2);
+  assert.strictEqual(result.panels.parallel, 1);
+  assert.strictEqual(result.panels.vocOk, true);
+  assert.strictEqual(result.chargeController.mode, "separate");
   assert.strictEqual(result.chargeController.rating, 120);
   assert.strictEqual(result.chargeController.count, 1);
   var view = api.formatResult(result);
@@ -83,39 +85,45 @@ test("500W x 6h auto lithium", function () {
 test("2000W x 8h auto lithium", function () {
   var result = calcSolar(base({ load: 2000, hours: 8 }));
   finiteResult(result);
-  assert.strictEqual(result.voltage, 24);
+  assert.strictEqual(result.voltage, 48);
   assert.strictEqual(result.bandVoltage, 24);
+  assert.strictEqual(result.voltageStepped, true);
+  close(result.batteryCurrentA, 2000 / 0.85 / 48);
   close(result.loadWh, 16000);
   close(result.battery.wh, (16000 / 0.85) / 0.8);
-  assert.strictEqual(result.battery.ah, 981);
-  assert.strictEqual(result.battery.id, "lfp-25.6-200");
-  assert.strictEqual(result.battery.units, 5);
+  assert.strictEqual(result.battery.ah, 491);
+  assert.strictEqual(result.battery.id, "lfp-51.2-280");
+  assert.strictEqual(result.battery.units, 2);
   assert.strictEqual(result.battery.series, 1);
-  assert.strictEqual(result.battery.parallel, 5);
-  assert.strictEqual(result.inverter.label, "3.5 kVA");
+  assert.strictEqual(result.battery.parallel, 2);
+  assert.strictEqual(result.inverter.label, "5 kVA");
   assert.strictEqual(result.inverter.voltageMatch, true);
   assert.strictEqual(result.panels.count, 10);
+  assert.strictEqual(result.panels.series, 5);
+  assert.strictEqual(result.panels.parallel, 2);
   close(result.panels.arrayKW, 5.5);
-  assert.strictEqual(result.chargeController.multiple, true);
-  assert.strictEqual(result.chargeController.count, 3);
+  assert.strictEqual(result.panels.vocOk, true);
+  assert.ok(result.panels.coldVoc < 450);
+  assert.strictEqual(result.chargeController.mode, "hybrid");
+  assert.ok(result.chargeController.label.indexOf("hybrid inverter with built-in MPPT") !== -1);
   assert.ok(result.battery.alternatives.length === 2);
 });
 
 test("2000W x 8h auto tubular uses 12V 250Ah modules", function () {
   var result = calcSolar(base({ load: 2000, hours: 8, batteryType: "tubular" }));
   finiteResult(result);
-  assert.strictEqual(result.voltage, 24);
+  assert.strictEqual(result.voltage, 48);
   close(result.battery.wh, (16000 / 0.85) / 0.5);
-  assert.strictEqual(result.battery.ah, 1569);
+  assert.strictEqual(result.battery.ah, 785);
   assert.ok(result.battery.wh > calcSolar(base({ load: 2000, hours: 8 })).battery.wh);
-  assert.strictEqual(result.battery.id, "tub-12-250");
-  assert.strictEqual(result.battery.series, 2);
-  assert.strictEqual(result.battery.parallel, 7);
-  assert.strictEqual(result.battery.units, 14);
-  assert.strictEqual(result.battery.bankAh, 1750);
-  assert.strictEqual(result.battery.alternatives[0].id, "tub-12-200");
-  assert.strictEqual(result.inverter.label, "3.5 kVA");
-  assert.strictEqual(result.panels.count, 10);
+  assert.strictEqual(result.battery.id, "tub-12-200");
+  assert.strictEqual(result.battery.series, 4);
+  assert.strictEqual(result.battery.parallel, 4);
+  assert.strictEqual(result.battery.units, 16);
+  assert.strictEqual(result.battery.bankAh, 800);
+  assert.strictEqual(result.battery.alternatives[0].id, "tub-12-220");
+  assert.strictEqual(result.inverter.label, "5 kVA");
+  assert.strictEqual(result.panels.series, 5);
 });
 
 test("voltage bands and step-up when the inverter will not fit", function () {
@@ -152,7 +160,7 @@ test("user can override voltage and is warned when it is too low", function () {
 test("96V is only for loads above 8 kW", function () {
   var small = calcSolar(base({ load: 5000, voltage: 96 }));
   assert.strictEqual(small.ok, false);
-  assert.ok(small.errors.voltage.indexOf("8 kW") !== -1);
+  assert.ok(small.errors.voltage.indexOf("150A") !== -1);
   var big = calcSolar(base({ load: 8500, hours: 1, voltage: 96 }));
   finiteResult(big);
   assert.strictEqual(big.voltage, 96);
@@ -246,25 +254,61 @@ test("panel wattage changes the count and strings follow voltage", function () {
   finiteResult(narrow);
   finiteResult(wide);
   assert.ok(narrow.panels.minimumCount <= 2);
-  assert.strictEqual(narrow.panels.series, 1);
-  assert.strictEqual(wide.panels.vmp, 18);
-  assert.strictEqual(wide.panels.series, 4);
-  assert.strictEqual(wide.panels.count % 4, 0);
+  assert.ok(narrow.panels.series >= 1);
+  assert.strictEqual(narrow.panels.count % narrow.panels.series, 0);
+  assert.ok(wide.panels.series >= 2);
+  assert.strictEqual(wide.panels.vocOk, true);
+  assert.ok(wide.panels.coldVoc <= 500);
+  assert.strictEqual(wide.panels.count % wide.panels.series, 0);
   [300, 400, 450, 500, 550, 600, 650].forEach(function (watt) {
     assert.strictEqual(calcSolar(base({ panelW: watt })).ok, true);
   });
   assert.strictEqual(calcSolar(base({ panelW: 580 })).ok, false);
 });
 
-test("MPPT picks a standard rating and stacks controllers past 120A", function () {
-  var small = calcSolar(base({ load: 200, hours: 2, voltage: 48, panelW: 550 }));
-  finiteResult(small);
-  assert.ok(api.CONSTANTS.MPPT_RATINGS.indexOf(small.chargeController.rating) !== -1);
-  assert.strictEqual(small.chargeController.multiple, false);
-  var big = calcSolar(base({ load: 2000, hours: 8, voltage: 24 }));
-  assert.strictEqual(big.chargeController.rating, 120);
-  assert.ok(big.chargeController.count >= 2);
-  assert.ok(big.chargeController.note.indexOf("built-in MPPT") !== -1);
+test("hybrid MPPT is used when it covers the array, otherwise separate controllers", function () {
+  var hybrid = calcSolar(base({ load: 2000, hours: 8 }));
+  assert.strictEqual(hybrid.chargeController.mode, "hybrid");
+  assert.ok(hybrid.chargeController.label.indexOf("built-in MPPT") !== -1);
+  var separate = calcSolar(base({ load: 2000, hours: 8, voltage: 24 }));
+  assert.strictEqual(separate.chargeController.mode, "separate");
+  assert.strictEqual(separate.chargeController.rating, 120);
+  assert.ok(separate.chargeController.count >= 2);
+  assert.ok(separate.chargeController.note.indexOf("separate MPPT") !== -1);
+  assert.ok(separate.voltageAdvice.recommended === 48);
+});
+
+test("5000W x 8h uses a 48V hybrid that covers the array", function () {
+  var result = calcSolar(base({ load: 5000, hours: 8 }));
+  finiteResult(result);
+  assert.strictEqual(result.voltage, 48);
+  assert.ok(result.batteryCurrentA < 150);
+  assert.strictEqual(result.inverter.label, "12 kVA");
+  assert.strictEqual(result.chargeController.mode, "hybrid");
+  assert.strictEqual(result.battery.id, "lfp-51.2-314");
+  assert.strictEqual(result.battery.units, 4);
+  assert.strictEqual(result.panels.series, 8);
+  assert.strictEqual(result.panels.parallel, 3);
+  assert.strictEqual(result.panels.count, 24);
+  assert.ok(result.panels.coldVoc < 450);
+  assert.strictEqual(result.panels.vocOk, true);
+  assert.strictEqual(result.panels.vocFlags.length, 0);
+  assert.strictEqual(result.inverter.largeLoad, true);
+  assert.ok(api.formatQuote(result).indexOf("site survey") !== -1);
+});
+
+test("10000W x 8h steps to 96V and asks for a custom design", function () {
+  var result = calcSolar(base({ load: 10000, hours: 8 }));
+  finiteResult(result);
+  assert.strictEqual(result.voltage, 96);
+  assert.ok(result.batteryCurrentA < 150);
+  assert.ok(calcSolar(base({ load: 10000, hours: 1, voltage: 48 })).batteryCurrentA > 150);
+  assert.strictEqual(result.inverter.custom, true);
+  assert.strictEqual(result.chargeController.mode, "separate");
+  assert.ok(result.chargeController.count >= 2);
+  assert.ok(result.inverter.flags.join(" ").indexOf("parallel inverters") !== -1);
+  assert.ok(result.inverter.flags.join(" ").indexOf("site survey") !== -1);
+  assert.strictEqual(result.panels.vocOk, true);
 });
 
 test("autonomy scales the battery only, and lower sun hours add panels", function () {

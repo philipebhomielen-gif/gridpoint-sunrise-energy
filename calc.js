@@ -14,15 +14,19 @@
  *              Typical DC voltage: ≤2 kVA 12V, ≤4.2 kVA 24V,
  *              ≥5 kVA 48V, and 10–15 kVA also 96V.
  *              Above 15 kVA: contact us for a custom design.
- * Array      = dailyWh / (peakSunHours × 0.75), then the chosen module
- *              wattage, completed into equal series/parallel strings.
- * Controller = installed array watts / voltage × 1.25, matched to
- *              30, 40, 60, 80, 100, or 120A. Above 120A, use several
- *              controllers or the inverter's built-in MPPT.
+ *              3.5 kVA and larger hybrids include MPPT. If their PV
+ *              input covers the array, no separate controller is added.
+ * Array      = dailyWh / (peakSunHours × 0.75). Strings are sized for
+ *              the MPPT window. Panel Voc is 49.5V at 550W, scaled with
+ *              wattage, and checked at 1.1× for cold weather against
+ *              a 450–500V hybrid limit (150V or 250V for a separate MPPT).
+ * Controller = separate 30–120A MPPT only when the hybrid PV input is
+ *              too small. Above 120A, use more than one.
  *
- * Auto voltage: ≤1.5 kW → 12V, ≤3.5 kW → 24V, otherwise 48V.
- * If that voltage has no inverter large enough, Auto steps up.
- * 96V is allowed only above 8 kW. Autonomy enlarges the battery only.
+ * Auto voltage starts at 12V and steps up to 24V, 48V, or 96V when the
+ * lower voltage would draw more than about 150A from the battery or
+ * would need more than one charge controller. Loads of 5 kW and above
+ * note parallel inverters and a site survey.
  */
 (function (root, factory) {
   var api = factory();
@@ -48,10 +52,21 @@
   var MAX_LOAD_W = 50000;
   var MAX_HOURS = 24;
   var VOLTAGES = [12, 24, 48, 96];
-  var MIN_LOAD_96V = 8000;
+  var MAX_BATTERY_AMPS = 150;
+  var COLD_VOC_FACTOR = 1.1;
+  var LARGE_LOAD_W = 5000;
   var CUSTOM_LABEL = "Contact us for a custom design";
+  var HYBRIDS = [
+    { kva: 3.5, voltages: [24], pvKw: 5, trackers: 1, chargeA: 100, maxVoc: 500, minVmp: 90 },
+    { kva: 5, voltages: [48], pvKw: 6, trackers: 1, chargeA: 100, maxVoc: 500, minVmp: 120 },
+    { kva: 6.2, voltages: [48], pvKw: 6.5, trackers: 1, chargeA: 120, maxVoc: 500, minVmp: 120 },
+    { kva: 8, voltages: [48], pvKw: 10, trackers: 2, chargeA: 150, maxVoc: 500, minVmp: 120 },
+    { kva: 10, voltages: [48, 96], pvKw: 11, trackers: 2, chargeA: 180, maxVoc: 500, minVmp: 120 },
+    { kva: 12, voltages: [48, 96], pvKw: 15, trackers: 2, chargeA: 220, maxVoc: 500, minVmp: 120 },
+    { kva: 15, voltages: [48, 96], pvKw: 18, trackers: 2, chargeA: 250, maxVoc: 500, minVmp: 120 }
+  ];
 
-  var ASSUMPTIONS = "Estimate only, not a final installation design. Energy to supply is load watt-hours divided by 85% inverter efficiency. Battery watt-hours are that figure times autonomy days, divided by depth of discharge (80% LiFePO4, 50% tubular lead-acid). Auto picks the battery module that meets this with the fewest units and the least spare capacity. Series count has to land exactly on the system voltage. Inverter size is continuous load times 1.25 at 0.8 power factor. A 12V inverter is typically up to 2 kVA, 24V up to 4.2 kVA, and 5 kVA and above are 48V. The array uses your panel wattage, peak sun hours, and a 0.75 derate, then equal strings. Charge current is installed array watts divided by voltage, times 1.25. Peak sun hours default to 5 for Abuja. Auto voltage is 12V up to 1.5 kW, 24V up to 3.5 kW, then 48V, and steps up if that voltage has no large enough inverter. 96V is only for loads above 8 kW.";
+  var ASSUMPTIONS = "Estimate only, not a final installation design. Energy to supply is load watt-hours divided by 85% inverter efficiency. Battery watt-hours are that figure times autonomy days, divided by depth of discharge (80% LiFePO4, 50% tubular lead-acid). Auto picks the fewest modules with the least spare capacity, and series wiring has to land on the system voltage. Auto voltage steps up from 12V when battery current would pass about 150A or the array would need more than one charge controller. Inverter size is continuous load times 1.25 at 0.8 power factor. Hybrids from 3.5 kVA include MPPT (about 5 kW PV at 3.5 kVA, 6 kW at 5 kVA, 6.5–11 kW at 6.2–10 kVA, and more at 12–15 kVA). Separate MPPTs are used only when the array is larger than that. Panel open-circuit voltage is 49.5V for a 550W module, scaled by wattage, and checked at 1.1× against a 450–500V hybrid limit. Peak sun hours default to 5 for Abuja. At 5 kW and above, parallel inverters are an option and a site survey is recommended.";
 
   function ahModule(id, chemistry, nominalV, moduleV, ah) {
     return {
@@ -252,30 +267,79 @@
     });
   }
 
-  function panelVmp(panelW) {
-    return panelW <= 350 ? 18 : 41;
+  function panelElectrical(panelW) {
+    var scale = panelW / 550;
+    var voc = 49.5 * scale;
+    return { voc: voc, vmp: 41 * scale, coldVoc: voc * COLD_VOC_FACTOR };
   }
 
-  function stringPlan(panelW, systemV, minimumCount) {
-    var vmp = panelVmp(panelW);
-    var series = Math.max(1, roundUp((systemV * 1.25) / vmp));
-    var maxStringV = Math.max(150, systemV * 4);
-    while (series > 1 && series * vmp > maxStringV) series -= 1;
-    var parallel = Math.max(1, roundUp(minimumCount / series));
-    var count = series * parallel;
-    var layout;
-    if (series === 1 && parallel === 1) layout = "1 panel";
-    else if (series === 1) layout = parallel + " strings of 1 panel";
-    else if (parallel === 1) layout = series + " panels in series";
-    else layout = series + " in series × " + parallel + " parallel";
-    return { vmp: vmp, series: series, parallel: parallel, count: count, minimumCount: minimumCount, layout: layout };
+  function layoutText(series, parallel) {
+    if (series === 1 && parallel === 1) return "1 panel";
+    if (series === 1) return parallel + " strings of 1 panel";
+    if (parallel === 1) return series + " panels in series";
+    return series + " in series × " + parallel + " parallel";
   }
 
-  function controllerFor(installedW, systemV, inverterKva) {
+  function hybridFor(kva, systemV) {
+    var i;
+    for (i = 0; i < HYBRIDS.length; i++) {
+      if (almost(HYBRIDS[i].kva, kva) && HYBRIDS[i].voltages.indexOf(systemV) !== -1) return HYBRIDS[i];
+    }
+    return null;
+  }
+
+  function batteryAmps(loadW, voltage) {
+    return loadW / (EFFICIENCY * voltage);
+  }
+
+  function planStrings(panelW, minimumCount, window) {
+    var elec = panelElectrical(panelW);
+    var maxSeries = Math.max(1, Math.floor((window.maxVoc + 1e-6) / elec.coldVoc));
+    var minSeries = Math.max(1, Math.ceil((window.minVmp - 1e-9) / elec.vmp));
+    var cramped = false;
+    if (minSeries > maxSeries) {
+      cramped = true;
+      minSeries = maxSeries;
+    }
+    var best = null;
+    var series;
+    for (series = minSeries; series <= maxSeries; series++) {
+      var parallel = Math.max(1, roundUp(minimumCount / series));
+      var count = series * parallel;
+      var extra = count - minimumCount;
+      var rank = extra * 100 - series;
+      if (!best || rank < best.rank) {
+        best = {
+          series: series,
+          parallel: parallel,
+          count: count,
+          extra: extra,
+          rank: rank,
+          stringVmp: series * elec.vmp,
+          stringVoc: series * elec.voc,
+          coldVoc: series * elec.coldVoc
+        };
+      }
+    }
+    var flags = [];
+    if (best.coldVoc > window.maxVoc + 0.05 || cramped) {
+      flags.push("Cold string Voc is " + Math.round(best.coldVoc) + "V, above the " + window.maxVoc + "V MPPT limit.");
+    } else if (best.coldVoc > 450 && window.maxVoc >= 500) {
+      flags.push("Cold string Voc is " + Math.round(best.coldVoc) + "V. That is under 500V, but check a 450V MPPT limit.");
+    }
+    best.vocOk = best.coldVoc <= window.maxVoc + 0.05 && !cramped;
+    best.flags = flags;
+    best.panelVoc = elec.voc;
+    best.maxVoc = window.maxVoc;
+    best.layout = layoutText(best.series, best.parallel);
+    best.vocCheck = "Cold string Voc " + Math.round(best.coldVoc) + "V, " + (best.vocOk ? "within" : "above") + " the " + window.maxVoc + "V MPPT limit.";
+    return best;
+  }
+
+  function separateController(installedW, systemV) {
     var requiredA = installedW / systemV * CONTROLLER_MARGIN;
     var needed = roundUp(requiredA);
     var rating = null;
-    var count = 1;
     var i;
     for (i = 0; i < MPPT_RATINGS.length; i++) {
       if (MPPT_RATINGS[i] >= needed) {
@@ -283,31 +347,106 @@
         break;
       }
     }
+    var count = 1;
     var multiple = false;
-    var note = "Or use the inverter's built-in MPPT if it accepts this array.";
     if (!rating) {
       multiple = true;
       rating = 120;
       count = roundUp(needed / 120);
-      note = count + " separate 120A controllers, or an inverter whose built-in MPPT covers this array.";
     }
-    var label = count === 1 ? rating + "A MPPT" : count + " × " + rating + "A MPPT";
     return {
+      mode: "separate",
       requiredA: requiredA,
       amps: needed,
       rating: rating,
       count: count,
       multiple: multiple,
-      label: label,
-      note: note,
-      inverterKva: inverterKva
+      label: count === 1 ? rating + "A MPPT" : count + " × " + rating + "A MPPT",
+      note: multiple
+        ? "The array is larger than a standard hybrid PV input, so these are separate MPPTs."
+        : "Separate MPPT. This inverter has no built-in MPPT large enough for the array."
     };
   }
 
-  function chooseInverter(loadW, systemV, requested) {
+  function externalWindow(systemV, installedW) {
+    var amps = installedW / systemV * CONTROLLER_MARGIN;
+    return {
+      minVmp: Math.max(18, systemV * 1.5),
+      maxVoc: amps > 60 ? 250 : 150
+    };
+  }
+
+  function hybridWindow(spec, systemV) {
+    return {
+      minVmp: systemV >= 96 ? Math.max(spec.minVmp, 200) : spec.minVmp,
+      maxVoc: spec.maxVoc
+    };
+  }
+
+  function solveArray(systemV, arrayW, panelW, inverter) {
+    var minimum = Math.max(1, roundUp(arrayW / panelW));
+    var spec = inverter.kva && inverter.voltageMatch && !inverter.undersized
+      ? hybridFor(inverter.kva, systemV)
+      : null;
+    var roughW = minimum * panelW;
+    var useHybrid = !!(spec && roughW / 1000 <= spec.pvKw + 1e-9);
+    var window = useHybrid ? hybridWindow(spec, systemV) : externalWindow(systemV, roughW);
+    var strings = planStrings(panelW, minimum, window);
+    var installedW = strings.count * panelW;
+    if (useHybrid && installedW / 1000 > spec.pvKw + 1e-9) {
+      useHybrid = false;
+      window = externalWindow(systemV, installedW);
+      strings = planStrings(panelW, minimum, window);
+      installedW = strings.count * panelW;
+    }
+    var controller;
+    if (useHybrid) {
+      var requiredA = installedW / systemV * CONTROLLER_MARGIN;
+      controller = {
+        mode: "hybrid",
+        requiredA: requiredA,
+        amps: roundUp(requiredA),
+        rating: null,
+        count: 1,
+        multiple: false,
+        trackers: spec.trackers,
+        pvKw: spec.pvKw,
+        label: inverter.kva + " kVA hybrid inverter with built-in MPPT",
+        note: "Built-in MPPT covers about " + spec.pvKw + " kW of PV" + (spec.trackers > 1 ? " on " + spec.trackers + " trackers" : "") + "."
+      };
+    } else {
+      controller = separateController(installedW, systemV);
+      if (spec) {
+        controller.note = "Array is about " + (installedW / 1000).toFixed(1) + " kW, above this hybrid's " + spec.pvKw + " kW PV input. Use separate MPPTs.";
+      }
+    }
+    return { strings: strings, installedW: installedW, controller: controller, hybrid: useHybrid, spec: spec };
+  }
+
+  function voltageIsPractical(loadW, voltage, arrayW, panelW) {
+    return voltageBlockers(loadW, voltage, arrayW, panelW).length === 0;
+  }
+
+  function voltageBlockers(loadW, voltage, arrayW, panelW) {
+    var reasons = [];
+    var amps = batteryAmps(loadW, voltage);
+    if (amps > MAX_BATTERY_AMPS + 1e-6) reasons.push("about " + Math.round(amps) + "A of battery current");
+    var inverter = chooseInverter(loadW, voltage, "auto", arrayW, panelW);
+    if (!inverter.available || inverter.custom || !inverter.voltageMatch) {
+      reasons.push("no single standard inverter");
+    } else {
+      var solved = solveArray(voltage, arrayW, panelW, inverter);
+      var oneController = solved.hybrid || (solved.controller.count === 1 && !solved.controller.multiple);
+      if (!oneController) reasons.push("more than one charge controller");
+    }
+    return reasons;
+  }
+
+  function chooseInverter(loadW, systemV, requested, arrayW, panelW) {
     var requiredW = loadW * INVERTER_SAFETY;
     var requiredKva = requiredW / (POWER_FACTOR * 1000);
     var auto = requested === undefined || requested === null || requested === "" || requested === "auto";
+    var i;
     if (!auto) {
       var chosen = parseNumber(requested);
       var known = false;
@@ -360,11 +499,39 @@
         flags: ["This load needs about " + requiredKva.toFixed(1) + " kVA, above 15 kVA."]
       };
     }
-    var match = null;
+    var candidates = [];
     for (i = 0; i < INVERTER_KVA.length; i++) {
       if (inverterVoltages(INVERTER_KVA[i]).indexOf(systemV) !== -1 && continuousWatts(INVERTER_KVA[i]) + 1e-6 >= requiredW) {
-        match = INVERTER_KVA[i];
-        break;
+        candidates.push(INVERTER_KVA[i]);
+      }
+    }
+    var match = candidates.length ? candidates[0] : null;
+    if (match !== null && arrayW && panelW) {
+      function trialFor(kva) {
+        return {
+          mode: "auto",
+          custom: false,
+          available: true,
+          kva: kva,
+          label: kva + " kVA",
+          requiredW: requiredW,
+          requiredKva: requiredKva,
+          continuousW: continuousWatts(kva),
+          surgeW: continuousWatts(kva) * SURGE_FACTOR,
+          voltageMatch: true,
+          undersized: false,
+          flags: []
+        };
+      }
+      var smallestSolved = solveArray(systemV, arrayW, panelW, trialFor(match));
+      if (!smallestSolved.hybrid && (smallestSolved.controller.multiple || smallestSolved.controller.count > 1)) {
+        var h;
+        for (h = 1; h < candidates.length; h++) {
+          if (solveArray(systemV, arrayW, panelW, trialFor(candidates[h])).hybrid) {
+            match = candidates[h];
+            break;
+          }
+        }
       }
     }
     if (match === null) {
@@ -461,31 +628,30 @@
     if (Object.keys(errors).length) return { ok: false, errors: errors };
 
     var loadW = load.value;
+    var sunHours = psh.value;
+    var loadWhPreview = loadW * hours.value;
+    var dailyWhPreview = loadWhPreview / EFFICIENCY;
+    var arrayW = dailyWhPreview / (sunHours * PANEL_DERATE);
     var band = bandVoltage(loadW);
+    var preferred = null;
+    var ladder;
+    for (ladder = 0; ladder < VOLTAGES.length; ladder++) {
+      if (voltageIsPractical(loadW, VOLTAGES[ladder], arrayW, panelParsed.value)) {
+        preferred = VOLTAGES[ladder];
+        break;
+      }
+    }
+    if (preferred === null) preferred = batteryAmps(loadW, 48) > MAX_BATTERY_AMPS ? 96 : 48;
+
     var stepped = false;
     var systemV = voltageNumber;
     if (voltageAuto) {
-      var order = [band, 12, 24, 48, 96];
-      var seen = {};
-      var v;
-      systemV = null;
-      for (v = 0; v < order.length; v++) {
-        var candidate = order[v];
-        if (seen[candidate]) continue;
-        seen[candidate] = true;
-        if (candidate === 12 && band > 12) continue;
-        if (candidate === 24 && band > 24) continue;
-        if (voltageCanHost(loadW, candidate)) {
-          systemV = candidate;
-          stepped = candidate !== band;
-          break;
-        }
-      }
-      if (systemV === null) systemV = band;
-    } else if (systemV === 96 && !(loadW > MIN_LOAD_96V)) {
+      systemV = preferred;
+      stepped = systemV !== band;
+    } else if (systemV === 96 && preferred !== 96 && batteryAmps(loadW, 48) <= MAX_BATTERY_AMPS + 1e-6) {
       return {
         ok: false,
-        errors: { voltage: "96V is only for very large systems, above 8 kW." }
+        errors: { voltage: "96V is only for a very large system, when 48V would mean more than about 150A or more than one charge controller." }
       };
     }
 
@@ -525,29 +691,34 @@
     }
 
     var advice = null;
-    if (!voltageAuto && systemV !== 96) {
-      var rank = { 12: 1, 24: 2, 48: 3, 96: 4 };
-      if (rank[systemV] < rank[band]) {
-        advice = {
-          recommended: band,
-          message: "A " + systemV + "V system is small for this load. " + band + "V is a better fit."
-        };
-      }
+    var rank = { 12: 1, 24: 2, 48: 3, 96: 4 };
+    if (!voltageAuto && rank[systemV] < rank[preferred]) {
+      advice = {
+        recommended: preferred,
+        message: "A " + systemV + "V system is small for this load (about " + Math.round(batteryAmps(loadW, systemV)) + "A from the battery). " + preferred + "V keeps current and charge control more reasonable."
+      };
     }
     if (stepped) {
+      var skipped = systemV === 96 ? 48 : systemV === 48 ? 24 : 12;
+      var blockers = voltageBlockers(loadW, skipped, arrayW, panelParsed.value);
       advice = {
         recommended: systemV,
-        message: "This load is in the " + band + "V band, but it needs a larger inverter than " + band + "V models usually are. Auto chose " + systemV + "V."
+        message: "Auto chose " + systemV + "V instead of " + skipped + "V, which would mean " + (blockers.join(" and ") || "a poorer match") + "."
       };
     }
 
-    var inverter = chooseInverter(loadW, systemV, input.inverter);
+    var inverter = chooseInverter(loadW, systemV, input.inverter, arrayW, panelParsed.value);
     if (inverter.error) return { ok: false, errors: { inverter: inverter.error } };
+    if (loadW >= LARGE_LOAD_W) {
+      inverter.flags = inverter.flags.concat(["Above 5 kW, splitting the load across parallel inverters is an option. A site survey is recommended."]);
+      inverter.largeLoad = true;
+    }
 
-    var minimumPanels = roundUp(dailyWh / (psh.value * PANEL_DERATE) / panelParsed.value);
-    var strings = stringPlan(panelParsed.value, systemV, minimumPanels);
-    var installedW = strings.count * panelParsed.value;
-    var controller = controllerFor(installedW, systemV, inverter.kva);
+    var power = solveArray(systemV, arrayW, panelParsed.value, inverter);
+    var strings = power.strings;
+    var installedW = power.installedW;
+    var controller = power.controller;
+    var minimumPanels = Math.max(1, roundUp(arrayW / panelParsed.value));
 
     var numbers = [loadWh, dailyWh, batteryWh, batteryAh, selected.installedWh, selected.units, minimumPanels, strings.count, installedW, controller.amps, inverter.requiredW];
     if (inverter.continuousW !== null) numbers.push(inverter.continuousW);
@@ -566,6 +737,8 @@
       voltageMode: voltageAuto ? "auto" : "chosen",
       bandVoltage: band,
       voltageStepped: stepped,
+      preferredVoltage: preferred,
+      batteryCurrentA: batteryAmps(loadW, systemV),
       batteryType: batteryType,
       batteryLabel: chemistryLabel(batteryType),
       batteryModuleMode: moduleAuto ? "auto" : "chosen",
@@ -604,7 +777,12 @@
         series: strings.series,
         parallel: strings.parallel,
         layout: strings.layout,
-        vmp: strings.vmp,
+        vmp: strings.stringVmp,
+        stringVoc: strings.stringVoc,
+        coldVoc: strings.coldVoc,
+        vocCheck: strings.vocCheck,
+        vocOk: strings.vocOk,
+        vocFlags: strings.flags,
         installedW: installedW,
         arrayKW: installedW / 1000
       },
@@ -635,7 +813,7 @@
         : formatGrouped(result.inverter.continuousW) + "W continuous, " + formatGrouped(result.inverter.surgeW) + "W surge",
       inverterFlags: flags,
       panels: result.panels.count + " × " + result.panels.moduleW + "W",
-      panelsSub: result.panels.arrayKW.toFixed(2) + " kW · " + result.panels.layout,
+      panelsSub: result.panels.arrayKW.toFixed(2) + " kW · " + result.panels.layout + " · " + result.panels.vocCheck,
       controller: result.chargeController.label,
       controllerNote: result.chargeController.note,
       advice: result.voltageAdvice ? result.voltageAdvice.message : ""
@@ -687,7 +865,8 @@
       MPPT_RATINGS: MPPT_RATINGS.slice(),
       DEFAULT_PSH: DEFAULT_PSH,
       DEFAULT_PANEL_W: DEFAULT_PANEL_W,
-      MIN_LOAD_96V: MIN_LOAD_96V,
+      MAX_BATTERY_AMPS: MAX_BATTERY_AMPS,
+      LARGE_LOAD_W: LARGE_LOAD_W,
       CUSTOM_LABEL: CUSTOM_LABEL
     }
   };
